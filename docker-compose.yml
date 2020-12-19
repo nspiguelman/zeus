@@ -1,0 +1,20 @@
+version: "3"
+services:
+  app:
+    container_name: zeus_app
+    build: .
+    ports:
+      - 8080:8080
+    restart: always
+    volumes:
+      - api:/usr/src/app/
+    networks:
+      - zeus
+
+volumes:
+  api:
+
+# Networks to be created to facilitate communication between containers
+networks:
+  zeus:
+    driver: bridge
