@@ -1,10 +1,12 @@
 package api
 
 import (
-	"fmt"
+	"github.com/nspiguelman/zeus/api/controllers"
 )
 
 // Run a
 func Run() {
-	fmt.Println("asd")
+	var server = controllers.Server{}
+	server.Initialize()
+	server.Run(":8080")
 }
