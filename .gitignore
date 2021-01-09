@@ -1,3 +1,5 @@
 .env
 init.sh
 remove.sh
+.idea
+.DS_Store
