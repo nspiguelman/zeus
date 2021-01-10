@@ -19,12 +19,10 @@ func NewServer(kahootController *controllers.KahootController) *Server {
 func (s *Server) StartServer() {
 	// List all paths
 	s.router.GET("room/:pin/users", s.getUsers)
-
-	go s.router.Run()
+	s.router.Run(":8080")
 }
 
 func (s *Server) getUsers(c *gin.Context) {
 	pin := c.Param("pin")
 	c.JSON(http.StatusOK, s.kahootController.GetUsers(pin))
 }
-
