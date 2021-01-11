@@ -21,7 +21,7 @@ func (s *Server) StartServer() {
 	s.router.GET("/ping", s.ping)
 	s.router.GET("/room/:pin/users", s.getUsers)
 
-	go s.router.Run()
+	s.router.Run()
 }
 
 func (s *Server) getUsers(c *gin.Context) {

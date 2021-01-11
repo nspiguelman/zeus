@@ -1,21 +1,19 @@
 package main
 
 import (
-	"github.com/abiosoft/ishell"
 	"github.com/nspiguelman/zeus/controllers"
-	"github.com/nspiguelman/zeus/domain"
 	"github.com/nspiguelman/zeus/rest"
 )
 
 func main() {
-	var user *domain.User
+	/*var user *domain.User
 	var nickname string
-	var password string
+	var password string*/
 	kahootController := controllers.NewKahootController()
 
 	server := rest.NewServer(&kahootController)
 	server.StartServer()
-
+/*
 	shell := ishell.New()
 	shell.SetPrompt("Kahoot >> ")
 	shell.Print("Type 'help' to get commands\n")
@@ -45,4 +43,5 @@ func main() {
 	})
 
 	shell.Run()
+*/
 }
