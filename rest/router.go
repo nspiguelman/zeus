@@ -18,7 +18,8 @@ func NewServer(kahootController *controllers.KahootController) *Server {
 
 func (s *Server) StartServer() {
 	// List all paths
-	s.router.GET("room/:pin/users", s.getUsers)
+	s.router.GET("/ping", s.ping)
+	s.router.GET("/room/:pin/users", s.getUsers)
 
 	go s.router.Run()
 }
@@ -28,3 +29,6 @@ func (s *Server) getUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, s.kahootController.GetUsers(pin))
 }
 
+func (s *Server) ping(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{ "message": "pong" })
+}

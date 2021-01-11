@@ -43,4 +43,6 @@ func main() {
 			return
 		},
 	})
+
+	shell.Run()
 }
