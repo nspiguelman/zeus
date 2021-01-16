@@ -1,5 +1,6 @@
 .env
 init.sh
-remove.sh
 .idea
 .DS_Store
+main
+user stories

@@ -17,14 +17,17 @@ func NewServer(kahootController *controllers.KahootController) *Server {
 }
 
 func (s *Server) StartServer() {
-	// List all paths
-	s.router.GET("/ping", s.ping)
 	s.router.GET("/room/:pin/users", s.getUsers)
 
+	// CREATE Game
 	s.router.POST("/room") // Create game
-	s.router.POST("/room/:pin/login") // Login users
 	s.router.POST("/room/:pin/question") // Create question
-	s.router.POST("/room/:pin/question/:id/user/:user_id") // Answer question
+	s.router.POST("/room/:pin/question/:id_question/answer") // Create answers
+
+	// Play game
+	s.router.POST("/room/:pin/login") // Login users
+
+	s.router.POST("/room/:pin/question/:id_question/user/:user_id") // Answer question
 
 	s.router.GET("/room/:pin/next_question") // Get next question
 	s.router.GET("/room/:pin/score") // Get total score
@@ -36,8 +39,4 @@ func (s *Server) StartServer() {
 func (s *Server) getUsers(c *gin.Context) {
 	pin := c.Param("pin")
 	c.JSON(http.StatusOK, s.kahootController.GetUsers(pin))
-}
-
-func (s *Server) ping(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{ "message": "pong" })
 }

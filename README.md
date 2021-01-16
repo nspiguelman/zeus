@@ -2,8 +2,8 @@
 
 ## DESARROLLO
 
-- para levantar los contenedores ejecutar
+Para poder usar la aplicación primero debe levantarse la base de datos y luego la API.
 
 ```bash
-    docker-compose up --build
+    docker-compose -f ./Docker/sql/docker-compose.yml up --build && docker-compose up --build
 ```
