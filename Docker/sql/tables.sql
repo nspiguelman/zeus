@@ -1,5 +1,5 @@
 CREATE TABLE kahoot (
-    id BIGINT NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(255)
 );
 
