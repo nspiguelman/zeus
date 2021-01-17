@@ -1,16 +1,18 @@
 package domain
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 type Kahoot struct {
-	id  int `gorm:"primary_key;not null"`
-	name string `gorm:"<-:create"`
+	ID int `gorm:"primaryKey"`
+	Name string `gorm:"not null"`
 }
 
-func CreateKahootDomain(db *gorm.DB) {
-	newKahoot := Kahoot{id: 20, name: "nahuel"}
-	result := db.Debug().Create(&newKahoot)
+func CreateKahootDomain(db *gorm.DB, kahoot *Kahoot) (int, error) {
+	result := db.Create(kahoot)
 	if result.Error != nil {
-		panic(result.Error.Error())
+		return 0, result.Error
 	}
+	return kahoot.ID, nil
 }

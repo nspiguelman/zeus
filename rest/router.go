@@ -18,7 +18,6 @@ func NewServer(kahootController *controllers.KahootController, db *gorm.DB) *Ser
 }
 
 func (s *Server) StartServer() {
-
 	s.router.POST("/room", s.kahootController.CreateKahoot(s.db))
 	s.router.Run()
 }

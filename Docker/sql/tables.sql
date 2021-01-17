@@ -1,6 +1,6 @@
 CREATE TABLE kahoot (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255)
+    name VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE question (
