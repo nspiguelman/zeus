@@ -1,22 +1,29 @@
 package domain
 
 type KahootGame struct {
-	trivias      []Trivia
+	trivias      []Question
+	host		User
 	users		[]User
 	pin 		string
 }
 
-func NewKahootGame() KahootGame {
-	trivias := make([]Trivia, 0)
+func NewKahootGame(host User) KahootGame {
+	trivias := make([]Question, 0)
 	users := make([]User, 0)
 	pin := "123534" //TODO: Use random generator
-	return KahootGame{trivias, users, pin}
+	return KahootGame{trivias,host,  users, pin}
 }
 
-func (kg *KahootGame) PublishTrivia(trivia Trivia) (int, error) {
+func NewKahootGameTrivias(host User, trivias []Question) KahootGame {
+	users := make([]User, 0)
+	pin := "123534" //TODO: Use random generator
+	return KahootGame{trivias, host, users, pin}
+}
+
+func (kg *KahootGame) PublishTrivia(trivia Question) (int, error) {
 	// TODO: Validate trivia
 	kg.trivias = append(kg.trivias, trivia)
-	return trivia.GetId(), nil
+	return trivia.ID, nil
 }
 
 func (kg *KahootGame) AddUser(user User) error {

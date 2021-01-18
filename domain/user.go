@@ -1,22 +1,12 @@
 package domain
 
 type User struct {
-	Nickname string
-	Password string
+	ID       uint   `json:"id"`
+	Username string `json:"username"`
+	Score    uint   `json:"score,omitempty"`
+	KahootId uint	`json:"kahoot_id"`
 }
 
-func NewUser(nickname string, password string) *User {
-	return &User{nickname, password}
-}
-
-func (user *User) GetNickname() string {
-	return user.Nickname
-}
-
-func (user *User) SetNickname(nickname string) {
-	user.Nickname = nickname
-}
-
-func (user *User) SetPassword(psw string) {
-	user.Password = psw
+func NewUser(username string) *User {
+	return &User{Username: username}
 }

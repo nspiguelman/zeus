@@ -1,5 +1,6 @@
 CREATE TABLE kahoot (
     id SERIAL PRIMARY KEY,
+    pin CHAR(6) NOT NULL,
     name VARCHAR(255) NOT NULL
 );
 
@@ -23,4 +24,14 @@ CREATE TABLE answer (
     CONSTRAINT fk_answer_question
         foreign key (id_question)
             REFERENCES question(id)
+)
+
+CREATE TABLE kahootUser (
+    id SERIAL NOT NULL PRIMARY KEY,
+    username VARCHAR(255),
+    score INTEGER,
+    kahoot_id BIGINT NOT NULL,
+    CONSTRAINT fk_user_kahoot
+        FOREIGN KEY (kahoot_id)
+            REFERENCES kahoot(id)
 )

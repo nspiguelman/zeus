@@ -1,18 +1,30 @@
 package domain
 
 import (
-	"gorm.io/gorm"
+	"crypto/rand"
+	"log"
+	"math/big"
+	"strconv"
 )
 
+
 type Kahoot struct {
-	ID int `gorm:"primaryKey"`
-	Name string `gorm:"not null"`
+	ID int `gorm:"primaryKey" json:"-"`
+	PIN string `json:"pin"`
+	Name string `gorm:"not null" json:"name"`
 }
 
-func CreateKahootDomain(db *gorm.DB, kahoot *Kahoot) (int, error) {
-	result := db.Create(kahoot)
-	if result.Error != nil {
-		return 0, result.Error
+func NewKahoot(name string) *Kahoot {
+	pin := strconv.FormatInt(generatePin(), 10)
+	return &Kahoot{Name: name, PIN: pin}
+}
+
+func generatePin() int64 {
+	max := big.NewInt(999999)
+	n, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		log.Fatal(err)
+		return 0
 	}
-	return kahoot.ID, nil
+	return n.Int64()
 }

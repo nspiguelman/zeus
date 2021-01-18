@@ -3,22 +3,28 @@ package rest
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/nspiguelman/zeus/controllers"
-	"gorm.io/gorm"
 )
 
 type Server struct {
 	router       *gin.Engine
 	kahootController *controllers.KahootController
-	db *gorm.DB
 }
 
-func NewServer(kahootController *controllers.KahootController, db *gorm.DB) *Server {
+func NewServer(kahootController *controllers.KahootController) *Server {
 	router := gin.Default()
-	return &Server{router, kahootController, db}
+	return &Server{router, kahootController}
 }
 
 func (s *Server) StartServer() {
-	s.router.POST("/room", s.kahootController.CreateKahoot(s.db))
+	s.router.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+
+	})
+	s.router.POST("/room", s.kahootController.CreateKahoot())
+	s.router.POST("/room/:pin/login", s.kahootController.Login())
+
 	s.router.Run()
 }
 /*

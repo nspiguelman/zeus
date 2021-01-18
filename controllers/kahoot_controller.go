@@ -3,9 +3,9 @@ package controllers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/nspiguelman/zeus/core"
+	"github.com/nspiguelman/zeus/data"
 	"github.com/nspiguelman/zeus/domain"
 	"gopkg.in/validator.v2"
-	"gorm.io/gorm"
 	"net/http"
 )
 
@@ -37,7 +37,7 @@ func (kc *KahootController) _getUsers(pin string) []domain.User {
 
 // ---------------
 
-func (kc *KahootController) CreateKahoot(db *gorm.DB) func(c *gin.Context) {
+func (kc *KahootController) CreateKahoot() func(c *gin.Context) {
 	return func (c *gin.Context) {
 		var kahoot core.KahootInput
 		if err := c.ShouldBindJSON(&kahoot); err != nil {
@@ -49,12 +49,26 @@ func (kc *KahootController) CreateKahoot(db *gorm.DB) func(c *gin.Context) {
 			return
 		}
 
-		result, err := core.CreateKahootCore(db, &kahoot);
+		kahootCore := &core.KahootCore{
+			KahootRepository: &data.KahootRepository{
+				Data: data.New(),
+			},
+			UserRepository: &data.UserRepository{
+				Data: data.New(),
+			},
+		}
+		result, err := kahootCore.CreateKahootCore(&kahoot);
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{ "error": err.Error() })
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"data": result })
+		c.JSON(http.StatusCreated, result)
+	}
+}
+
+func (kc *KahootController) Login() func(c *gin.Context) {
+	return func (c *gin.Context) {
+
 	}
 }
