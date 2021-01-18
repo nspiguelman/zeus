@@ -66,9 +66,3 @@ func (kc *KahootController) CreateKahoot() func(c *gin.Context) {
 		c.JSON(http.StatusCreated, result)
 	}
 }
-
-func (kc *KahootController) Login() func(c *gin.Context) {
-	return func (c *gin.Context) {
-
-	}
-}
