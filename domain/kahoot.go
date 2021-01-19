@@ -9,14 +9,14 @@ import (
 
 
 type Kahoot struct {
-	ID int `gorm:"primaryKey" json:"-"`
-	PIN string `json:"pin"`
+	ID int `gorm:"primaryKey" json:"id"`
+	PIN string `gorm:"not null" json:"pin"`
 	Name string `gorm:"not null" json:"name"`
 }
 
-func NewKahoot(name string) *Kahoot {
+func NewKahoot(input KahootInput) *Kahoot {
 	pin := strconv.FormatInt(generatePin(), 10)
-	return &Kahoot{Name: name, PIN: pin}
+	return &Kahoot{Name: input.Name, PIN: pin}
 }
 
 func generatePin() int64 {
