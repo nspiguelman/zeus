@@ -23,6 +23,7 @@ func (s *Server) StartServer() {
 
 	})
 	s.router.POST("/room", s.kahootController.CreateKahoot())
+	s.router.POST("/room/:pin/question", s.kahootController.CreateQuestion())
 
 	s.router.Run()
 }

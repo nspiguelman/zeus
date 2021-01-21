@@ -1,51 +1,33 @@
 package domain
 
-import (
-	"strings"
-)
-
 type Question struct {
-	ID   int
-	Question string
-	Description string //TODO: Maybe it's not needed
-	// options map[string]bool //Set of options
-	// correctAnswer string
-	// date *time.Time
+	ID          int    `gorm:"primaryKey" json:"id"`
+	Question    string `json:"question"`
+	Description string `json:"description"`
+	KahootID    int    `gorm:"not null" json:"kahoot_id"`
 }
 
-func NewMultipleChoiceTrivia(question string, options map[string]bool, correctAnswer string, description string) *Question {
-	// date := time.Now()
-	correctAnswerFormatted := strings.ToLower(correctAnswer)
-	optionsFormatted := make(map[string]bool)
-
-	for k, v := range options {
-		option := strings.ToLower(k)
-		optionsFormatted[option] = v
-	}
-
-	if _, ok := optionsFormatted[correctAnswerFormatted]; !ok {
-		panic("Correct answer is not an possible option");
-	}
-
-	return &(Question{Question: question, Description: description})
+type Answer struct {
+	ID          int    `gorm:"primaryKey" json:"id"`
+	AnswerID    int    `gorm:"primaryKey" json:"answer_id"`
+	Description string `json:"description"`
+	QuestionID  int    `gorm:"not null" json:"question_id"`
+	IsTrue      bool   `json:"is_true"`
 }
 
-/*
-func (t *Question) GetOptions() []string {
-	v := make([]string, len(t.options))
-	id := 0
-	for k, _ := range t.options {
-		v[id] = k
-		id++
+func NewQuestion(kahootID int, input QuestionInput) *Question {
+	return &Question{
+		Question:    input.Question,
+		Description: input.Description,
+		KahootID:    kahootID,
 	}
-	return v
 }
 
-func (t *Question) IsCorrect(option string) bool {
-	if _, ok := t.options[option]; !ok {
-		panic("Option does not exist");
+func NewAnswer(questionID int, answerID int, input AnswerInput) *Answer {
+	return &Answer{
+		AnswerID:    answerID,
+		Description: input.Description,
+		QuestionID:  questionID,
+		IsTrue:      input.IsTrue,
 	}
-
-	return t.correctAnswer == option
 }
-*/

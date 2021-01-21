@@ -5,7 +5,7 @@ CREATE TABLE kahoot (
 );
 
 CREATE TABLE question (
-    id BIGINT NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     question VARCHAR(255),
     description VARCHAR(255),
     kahoot_id BIGINT NOT NULL,
@@ -15,16 +15,16 @@ CREATE TABLE question (
 );
 
 CREATE TABLE answer (
-    id BIGINT NOT NULL,
+    id SERIAL,
     answer_id BIGINT NOT NULL,
     description VARCHAR(255),
-    id_question BIGINT NOT NULL,
+    question_id BIGINT NOT NULL,
     is_true BOOLEAN,
     PRIMARY KEY(id, answer_id),
     CONSTRAINT fk_answer_question
-        foreign key (id_question)
+        foreign key (question_id)
             REFERENCES question(id)
-)
+);
 
 CREATE TABLE kahootUser (
     id SERIAL NOT NULL PRIMARY KEY,
@@ -34,4 +34,4 @@ CREATE TABLE kahootUser (
     CONSTRAINT fk_user_kahoot
         FOREIGN KEY (kahoot_id)
             REFERENCES kahoot(id)
-)
+);
