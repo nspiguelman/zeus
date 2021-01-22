@@ -1,6 +1,7 @@
 package data
 
 import (
+	"github.com/gomodule/redigo/redis"
 	"gorm.io/gorm"
 	"log"
 	"sync"
@@ -13,6 +14,7 @@ var (
 
 type Data struct {
 	DB *gorm.DB
+	RedisDB redis.Conn
 }
 
 func initDB() {
@@ -21,8 +23,14 @@ func initDB() {
 		log.Panic(err.Error())
 	}
 
+	conn, err := getRedisConnection()
+	if err != nil {
+		log.Panic(err.Error())
+	}
+
 	data = &Data {
 		DB: db,
+		RedisDB: conn,
 	}
 }
 
@@ -32,11 +40,11 @@ func New() *Data {
 	return data
 }
 
-func Close() error {
+func Close() (error, error) {
 	if data == nil {
-		return nil
+		return nil, nil
 	}
 
 	sqlDB, _ := data.DB.DB()
-	return sqlDB.Close()
+	return sqlDB.Close(), data.RedisDB.Close()
 }
