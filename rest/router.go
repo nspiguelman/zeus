@@ -20,12 +20,21 @@ type Server struct {
 	answerToProcess []answer
 }
 
+type Score struct {
+	partialScore int
+	isCorrect bool
+	typeMessage string `default:"score"`
+}
+
+type Question struct {
+	QuestionId int
+	answerIds []int
+	typeMessage string `default:"question"`
+}
+
 type answer struct {
-	kahootId string
-	timeout bool
-	token string
-	IdQuestion int
-	answer string
+	questionId int
+	answerId int
 }
 
 func NewServer(kahootController *controllers.KahootController) *Server {
@@ -65,10 +74,14 @@ func (s *Server) StartServer() {
 
 		s.socket.HandleRequest(c.Writer, c.Request)
 		s.socket.HandleMessage(func(x *melody.Session, msg []byte) {
-			go proccesAnswer(msg, s.channelkahoot)
+			pin := c.Param("pin")
+			token := c.GetHeader("token")
+			if s.kahootController.KahootGames.IsTimeout {
+				// no envia respuesta
+			}
+			go proccesAnswer(msg, pin, token, s.channelkahoot)
 			s.answerToProcess = append(s.answerToProcess,<-s.channelkahoot)
 		})
-
 	})
 
 	//CALCULAR PUNTAJES
@@ -77,7 +90,12 @@ func (s *Server) StartServer() {
 	})
 
 	//MANDA BROADCAST
-	s.router.GET("/room/:pin/start", func(c *gin.Context) {
+	s.router.GET("/room/:pin/send_question", func(c *gin.Context) {
+		// manejar el timeout con una nueva go routine
+		if !s.kahootController.KahootGames.IsScoreSent {
+			log.Panic("no fue enviado")
+		}
+		// setear timeout en false
 		go broadCastQuestion(s.socket)
 	})
 
@@ -97,16 +115,24 @@ func calculateScores(answers []answer)()  {
 	fmt.Printf("%v", answers)
 }
 
+/**
+Procesa un mensaje y lo encola en un channel
+ */
+func proccesAnswer(msg []byte, pin string, token string, c chan answer) {
+	// questionId
+	// answerId
+	/**
+	{ questionId: 1, answerIds: [200, 201, 202, 203] }
+	 */
 
-func proccesAnswer(msg []byte, c chan answer){
-	//convertir msg en struct y mandarlo al channel
-	var message = answer{kahootId: "PING",
+	/*var message = answer{
+		kahootId: pin,
 		timeout:           true,
 		token : "ASDASDASDAD",
-		IdQuestion:         1,
-		answer : "A",
-	}
-	c <- message
+		questionId:         1,
+		answerId : "A",
+	}*/
+	//	c <- message
 }
 
 

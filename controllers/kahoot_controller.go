@@ -10,7 +10,7 @@ import (
 )
 
 type KahootController struct {
-	kahootGames []domain.KahootGame
+	KahootGames *domain.KahootGame
 	kahootRepository *data.KahootRepository
 	userRepository *data.UserRepository
 	questionRepository *data.QuestionRepository
@@ -18,14 +18,14 @@ type KahootController struct {
 }
 
 func NewKahootController() KahootController {
-	kahootGames := make([]domain.KahootGame, 0)
 	dbData := data.New()
 	sqlDB, _ := dbData.DB.DB()
 	if err := sqlDB.Ping(); err != nil {
 		log.Panic(err.Error())
 	}
+
 	return KahootController{
-		kahootGames: kahootGames,
+		KahootGames: &domain.KahootGame{},
 		kahootRepository: &data.KahootRepository{
 			Data: dbData,
 		},

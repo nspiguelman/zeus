@@ -5,19 +5,54 @@ type KahootGame struct {
 	host		User
 	users		[]User
 	pin 		string
+	CurrentQuestion int // pregunta actual
+	TotalQuestions int // total de preguntas
+	IsTimeout bool // timeout de la pregunta
+	IsStarted bool // ya empezo el kahoot, no se puede suscribir nadie
+	IsScoreSent bool // la siguiente pregunta solo puede ser enviada cuando el score sea notificado
 }
 
 func NewKahootGame(host User) KahootGame {
 	trivias := make([]Question, 0)
 	users := make([]User, 0)
 	pin := "123534" //TODO: Use random generator
-	return KahootGame{trivias,host,  users, pin}
+	CurrentQuestion := 0
+	TotalQuestions := 0
+	IsTimeout := false
+	IsStarted := false
+	IsScoreSent := false
+	return KahootGame{
+		trivias,
+		host,
+		users,
+		pin,
+		CurrentQuestion,
+		TotalQuestions,
+		IsTimeout,
+		IsStarted,
+		IsScoreSent,
+	}
 }
 
 func NewKahootGameTrivias(host User, trivias []Question) KahootGame {
 	users := make([]User, 0)
 	pin := "123534" //TODO: Use random generator
-	return KahootGame{trivias, host, users, pin}
+	CurrentQuestion := 0
+	TotalQuestions := 0
+	IsTimeout := false
+	IsStarted := false
+	IsScoreSent := false
+	return KahootGame{
+		trivias,
+		host,
+		users,
+		pin,
+		CurrentQuestion,
+		TotalQuestions,
+		IsTimeout,
+		IsStarted,
+		IsScoreSent,
+	}
 }
 
 func (kg *KahootGame) PublishTrivia(trivia Question) (int, error) {
