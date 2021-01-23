@@ -3,6 +3,7 @@ package rest
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/nspiguelman/zeus/controllers"
@@ -16,8 +17,8 @@ type Server struct {
 	router       *gin.Engine
 	kahootController *controllers.KahootController
 	socket *melody.Melody
-	channelkahoot chan answer
-	answerToProcess []answer
+	channelKahoot chan Answer
+	answerToProcess []Answer
 }
 
 type Score struct {
@@ -32,17 +33,19 @@ type Question struct {
 	typeMessage string `default:"question"`
 }
 
-type answer struct {
-	questionId int
-	answerId int
+type Answer struct {
+	questionId int `json:"questionId"`
+	answerId int `json:"answerId"`
+	token string
+	IsTimeout bool `default:false`
 }
 
 func NewServer(kahootController *controllers.KahootController) *Server {
 	router := gin.Default()
 	socket := melody.New()
-	answerToProcess := []answer{}
-	channelkahoot := make(chan answer)
-	return &Server{router, kahootController, socket, channelkahoot, answerToProcess}
+	answerToProcess := []Answer{}
+	channelKahoot := make(chan Answer)
+	return &Server{router, kahootController, socket, channelKahoot, answerToProcess}
 }
 
 func (s *Server) StartServer() {
@@ -74,13 +77,26 @@ func (s *Server) StartServer() {
 
 		s.socket.HandleRequest(c.Writer, c.Request)
 		s.socket.HandleMessage(func(x *melody.Session, msg []byte) {
+			fmt.Println("asd")
 			pin := c.Param("pin")
 			token := c.GetHeader("token")
-			if s.kahootController.KahootGames.IsTimeout {
-				// no envia respuesta
+
+			answer := Answer{}
+			err := json.Unmarshal([]byte(msg), answer)
+
+			if err != nil {
+				panic(err.Error())
 			}
-			go proccesAnswer(msg, pin, token, s.channelkahoot)
-			s.answerToProcess = append(s.answerToProcess,<-s.channelkahoot)
+
+			answer.token = token
+			if s.kahootController.KahootGames.IsTimeout {
+				answer.IsTimeout = true
+			}
+
+			fmt.Printf("%+v\n", answer)
+
+			go processAnswer(answer, pin, token, s.channelKahoot)
+			s.answerToProcess = append(s.answerToProcess,<-s.channelKahoot)
 		})
 	})
 
@@ -99,11 +115,10 @@ func (s *Server) StartServer() {
 		go broadCastQuestion(s.socket)
 	})
 
-
 	s.router.Run()
 }
 
-func calculateScores(answers []answer)()  {
+func calculateScores(answers []Answer)()  {
 	//calcula puntajes desencolando la lista FILO y los serializa.
 	//y lanzar broadcast con pùntajes.
 
@@ -111,28 +126,11 @@ func calculateScores(answers []answer)()  {
 	//answers[len(answers)-1] = "" // Erase element (write zero value)
 	//answers = answers[:len(answers)-1] // elimino el ultimo
 
-
 	fmt.Printf("%v", answers)
 }
 
-/**
-Procesa un mensaje y lo encola en un channel
- */
-func proccesAnswer(msg []byte, pin string, token string, c chan answer) {
-	// questionId
-	// answerId
-	/**
-	{ questionId: 1, answerIds: [200, 201, 202, 203] }
-	 */
-
-	/*var message = answer{
-		kahootId: pin,
-		timeout:           true,
-		token : "ASDASDASDAD",
-		questionId:         1,
-		answerId : "A",
-	}*/
-	//	c <- message
+func processAnswer(answer Answer, pin string, token string, c chan Answer) {
+	c <- answer
 }
 
 
@@ -144,6 +142,7 @@ func broadCastQuestion(m *melody.Melody){
 }
 
 func GenerateToken(name string) string {
+	// pasar a jwt
 	hash, err := bcrypt.GenerateFromPassword([]byte(name), bcrypt.DefaultCost)
 	if err != nil {
 		log.Fatal(err)
