@@ -1,0 +1,15 @@
+version: "3"
+services:
+  zeus-redis:
+    image: 'bitnami/redis:latest'
+    container_name: zeus_db_redis
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - '6379:6379'
+    networks:
+      - sql_zeus
+
+networks:
+  sql_zeus:
+    external: true

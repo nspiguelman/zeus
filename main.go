@@ -12,9 +12,7 @@ func main() {
 
 	// dsn := "host=full_db_postgres user=zeus_db password=password dbname=zeus port=5432 sslmode=disable TimeZone=Asia/Shanghai"
 	d := data.New()
-
 	sqlDB, _ := d.DB.DB()
-
 	if err := sqlDB.Ping(); err != nil {
 		log.Panic(err.Error())
 	}
