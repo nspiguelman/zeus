@@ -20,6 +20,10 @@ type KahootController struct {
 func NewKahootController() KahootController {
 	kahootGames := make([]domain.KahootGame, 0)
 	dbData := data.New()
+	sqlDB, _ := dbData.DB.DB()
+	if err := sqlDB.Ping(); err != nil {
+		log.Panic(err.Error())
+	}
 	return KahootController{
 		kahootGames: kahootGames,
 		kahootRepository: &data.KahootRepository{

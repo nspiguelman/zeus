@@ -16,12 +16,24 @@ type Server struct {
 	router       *gin.Engine
 	kahootController *controllers.KahootController
 	socket *melody.Melody
+	channelkahoot chan answer
+	answerToProcess []answer
+}
+
+type answer struct {
+	kahootId string
+	timeout bool
+	token string
+	IdQuestion int
+	answer string
 }
 
 func NewServer(kahootController *controllers.KahootController) *Server {
 	router := gin.Default()
 	socket := melody.New()
-	return &Server{router, kahootController, socket}
+	answerToProcess := []answer{}
+	channelkahoot := make(chan answer)
+	return &Server{router, kahootController, socket, channelkahoot, answerToProcess}
 }
 
 func (s *Server) StartServer() {
@@ -50,37 +62,56 @@ func (s *Server) StartServer() {
 
 	//WEB SOCKET ; DONDE SE RECIBE LAS RESPUESTAS DE LOS CLIENTES
 	s.router.GET("/room/:pin/ws", func(c *gin.Context) {
-		s.socket.HandleRequest(c.Writer, c.Request)
-		go proccesAnswer(s.socket)
 
+		s.socket.HandleRequest(c.Writer, c.Request)
+		s.socket.HandleMessage(func(x *melody.Session, msg []byte) {
+			go proccesAnswer(msg, s.channelkahoot)
+			s.answerToProcess = append(s.answerToProcess,<-s.channelkahoot)
+		})
+
+	})
+
+	//CALCULAR PUNTAJES
+	s.router.GET("/room/:pin/calculateScores", func(c *gin.Context) {
+		go calculateScores(s.answerToProcess)
 	})
 
 	//MANDA BROADCAST
 	s.router.GET("/room/:pin/start", func(c *gin.Context) {
-
 		go broadCastQuestion(s.socket)
-
 	})
 
 
 	s.router.Run()
 }
 
+func calculateScores(answers []answer)()  {
+	//calcula puntajes desencolando la lista FILO y los serializa.
+	//y lanzar broadcast con pùntajes.
 
-func proccesAnswer(m *melody.Melody) {
+	//var lastAnswer = answers[len(answers)-1] //guardo el ultimo
+	//answers[len(answers)-1] = "" // Erase element (write zero value)
+	//answers = answers[:len(answers)-1] // elimino el ultimo
 
-	m.HandleMessage(func(s *melody.Session, msg []byte) {
-		//solo imprimo el mensaje que envia el cliente.
-		//aca deberìa ir la logica de chequear la respuesta y sumar puntaje etc.
-		fmt.Printf("%s\n", msg)
-	})
 
+	fmt.Printf("%v", answers)
+}
+
+
+func proccesAnswer(msg []byte, c chan answer){
+	//convertir msg en struct y mandarlo al channel
+	var message = answer{kahootId: "PING",
+		timeout:           true,
+		token : "ASDASDASDAD",
+		IdQuestion:         1,
+		answer : "A",
+	}
+	c <- message
 }
 
 
 func broadCastQuestion(m *melody.Melody){
 	time.Sleep(2 * time.Second)
-
 	b := []byte("{question: 1 = 1 ?}")
 	m.Broadcast(b)
 
