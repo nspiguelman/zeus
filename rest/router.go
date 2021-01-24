@@ -23,22 +23,22 @@ type Server struct {
 }
 
 type Score struct {
-	PartialScore int    `json:"partial_score"`
-	IsCorrect    bool   `json:"is_correct"`
-	TypeMessage  string `json:"type_message"`
+	PartialScore int    `json:"partialScore"`
+	IsCorrect    bool   `json:"isCorrect"`
+	TypeMessage  string `json:"typeMessage"`
 }
 
 type Question struct {
-	QuestionId  int    `json:"question_id"`
-	AnswerIds   []int  `json:"answer_ids"`
-	TypeMessage string `json:"type_message"`
+	QuestionId  int    `json:"questionId"`
+	AnswerIds   []int  `json:"answerIds"`
+	TypeMessage string `json:"typeMessage"`
 }
 
 type Answer struct {
-	QuestionId int    `json:"question_id"`
-	AnswerId   int    `json:"answer_id"`
+	QuestionId int    `json:"questionId"`
+	AnswerId   int    `json:"answerId"`
 	Token      string `json:"token"`
-	IsTimeout  bool   `json:"is_timeout"`
+	IsTimeout  bool   `json:"isTimeout"`
 }
 
 func NewServer(kahootController *controllers.KahootController) *Server {
