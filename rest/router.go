@@ -10,34 +10,35 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/olahol/melody.v1"
 	"log"
+	"net/http"
 	"time"
 )
 
 type Server struct {
-	router       *gin.Engine
+	router           *gin.Engine
 	kahootController *controllers.KahootController
-	socket *melody.Melody
-	channelKahoot chan Answer
-	answerToProcess []Answer
+	socket           *melody.Melody
+	channelKahoot    chan Answer
+	answerToProcess  []Answer
 }
 
 type Score struct {
-	partialScore int
-	isCorrect bool
-	typeMessage string `default:"score"`
+	partialScore int    `json:"partial_score"`
+	isCorrect    bool   `json:"is_correct"`
+	typeMessage  string `json:"type_message" default:"score"`
 }
 
 type Question struct {
-	QuestionId int
-	answerIds []int
-	typeMessage string `default:"question"`
+	QuestionId  int    `json:"question_id"`
+	answerIds   []int  `json:"answer_ids"`
+	typeMessage string `json:"type_message" default:"question"`
 }
 
 type Answer struct {
-	questionId int `json:"questionId"`
-	answerId int `json:"answerId"`
-	token string
-	IsTimeout bool `default:false`
+	questionId int    `json:"question_id"`
+	answerId   int    `json:"answer_id"`
+	token      string `json:"token"`
+	IsTimeout  bool   `json:"is_timeout" default:false` //TODO: Por qué es necesario este campo?
 }
 
 func NewServer(kahootController *controllers.KahootController) *Server {
@@ -60,7 +61,6 @@ func (s *Server) StartServer() {
 	s.router.POST("/room", s.kahootController.CreateKahoot())
 	s.router.POST("/room/:pin/question", s.kahootController.CreateQuestion())
 
-
 	//LOGIN ; Devuelve un token al usuario.
 	s.router.POST("/room/:pin/name/:name/login", func(c *gin.Context) {
 		name := c.Param("name")
@@ -70,7 +70,6 @@ func (s *Server) StartServer() {
 			"token": token,
 		})
 	}) // Login users
-
 
 	//WEB SOCKET ; DONDE SE RECIBE LAS RESPUESTAS DE LOS CLIENTES
 	s.router.GET("/room/:pin/ws", func(c *gin.Context) {
@@ -96,7 +95,7 @@ func (s *Server) StartServer() {
 			fmt.Printf("%+v\n", answer)
 
 			go processAnswer(answer, pin, token, s.channelKahoot)
-			s.answerToProcess = append(s.answerToProcess,<-s.channelKahoot)
+			s.answerToProcess = append(s.answerToProcess, <-s.channelKahoot)
 		})
 	})
 
@@ -106,19 +105,32 @@ func (s *Server) StartServer() {
 	})
 
 	//MANDA BROADCAST
-	s.router.GET("/room/:pin/send_question", func(c *gin.Context) {
+	s.router.POST("/room/:pin/send_question", func(c *gin.Context) {
 		// manejar el timeout con una nueva go routine
-		if !s.kahootController.KahootGames.IsScoreSent {
-			log.Panic("no fue enviado")
+		pin := c.Param("pin")
+		if !s.kahootController.KahootGames.IsStarted {
+			if err := s.kahootController.KahootGames.Start(pin); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		} else {
+			if !s.kahootController.KahootGames.IsScoreSent {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot send next question. Score must be sent."})
+				return
+			}
 		}
+
 		// setear timeout en false
-		go broadCastQuestion(s.socket)
+		go broadCastQuestion(s.socket, Question{
+			QuestionId: s.kahootController.KahootGames.CurrentQuestion,
+			answerIds: s.kahootController.KahootGames.GetCurrentAnswerIds(),
+		})
 	})
 
 	s.router.Run()
 }
 
-func calculateScores(answers []Answer)()  {
+func calculateScores(answers []Answer) () {
 	//calcula puntajes desencolando la lista FILO y los serializa.
 	//y lanzar broadcast con pùntajes.
 
@@ -133,12 +145,10 @@ func processAnswer(answer Answer, pin string, token string, c chan Answer) {
 	c <- answer
 }
 
-
-func broadCastQuestion(m *melody.Melody){
+func broadCastQuestion(m *melody.Melody, question Question) {
 	time.Sleep(2 * time.Second)
 	b := []byte("{question: 1 = 1 ?}")
 	m.Broadcast(b)
-
 }
 
 func GenerateToken(name string) string {
@@ -153,5 +163,3 @@ func GenerateToken(name string) string {
 	hasher.Write(hash)
 	return hex.EncodeToString(hasher.Sum(nil))
 }
-
-

@@ -10,11 +10,8 @@ import (
 )
 
 type KahootController struct {
+	rm *data.RepositoryManager
 	KahootGames *domain.KahootGame
-	kahootRepository *data.KahootRepository
-	userRepository *data.UserRepository
-	questionRepository *data.QuestionRepository
-	answerRepository *data.AnswerRepository
 }
 
 func NewKahootController() KahootController {
@@ -23,21 +20,11 @@ func NewKahootController() KahootController {
 	if err := sqlDB.Ping(); err != nil {
 		log.Panic(err.Error())
 	}
+	repositoryManager := data.NewRepositoryManager(dbData)
 
 	return KahootController{
-		KahootGames: &domain.KahootGame{},
-		kahootRepository: &data.KahootRepository{
-			Data: dbData,
-		},
-		userRepository: &data.UserRepository{
-			Data: dbData,
-		},
-		questionRepository: &data.QuestionRepository{
-			Data: dbData,
-		},
-		answerRepository: &data.AnswerRepository{
-			Data: dbData,
-		},
+		rm: repositoryManager,
+		KahootGames: domain.NewKahootGame(repositoryManager),
 	}
 }
 
@@ -55,7 +42,7 @@ func (kc *KahootController) CreateKahoot() func(c *gin.Context) {
 		}
 
 		kahoot := domain.NewKahoot(kahootInput)
-		if err := kc.kahootRepository.Create(kahoot); err != nil {
+		if err := kc.rm.KahootRepository.Create(kahoot); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{ "error": err.Error() })
 			return
 		}
@@ -67,8 +54,8 @@ func (kc *KahootController) CreateKahoot() func(c *gin.Context) {
 func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 	return func (c *gin.Context) {
 		pin := c.Param("pin")
-		log.Print(pin)
-		kahoot, err := kc.kahootRepository.GetByPin(pin);
+
+		kahoot, err := kc.rm.KahootRepository.GetByPin(pin);
 		if kahoot == nil && err == nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Room " + pin + " not found"})
 			return
@@ -90,7 +77,7 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 		}
 
 		question := domain.NewQuestion(kahoot.ID, questionInput)
-		if err := kc.questionRepository.Create(question); err != nil {
+		if err := kc.rm.QuestionRepository.Create(question); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error saving question: " + err.Error() })
 			return
 		}

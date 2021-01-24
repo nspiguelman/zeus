@@ -1,76 +1,121 @@
 package domain
 
+import (
+	"errors"
+	"github.com/nspiguelman/zeus/data"
+	"sync"
+)
+
+var (
+	game *KahootGame
+	once sync.Once
+)
+
 type KahootGame struct {
-	trivias      []Question
-	host		User
-	users		[]User
-	pin 		string
-	CurrentQuestion int // pregunta actual
-	TotalQuestions int // total de preguntas
-	IsTimeout bool // timeout de la pregunta
-	IsStarted bool // ya empezo el kahoot, no se puede suscribir nadie
-	IsScoreSent bool // la siguiente pregunta solo puede ser enviada cuando el score sea notificado
+	kahoot          *Kahoot
+	questions       []Question
+	answers         []Answer
+	host            User
+	users           []User
+	pin             string
+	CurrentQuestion int  // pregunta actual
+	TotalQuestions  int  // total de preguntas
+	IsTimeout       bool // timeout de la pregunta
+	IsStarted       bool // ya empezo el kahoot, no se puede suscribir nadie
+	IsScoreSent     bool // la siguiente pregunta solo puede ser enviada cuando el score sea notificado
+	rm              *data.RepositoryManager
 }
 
-func NewKahootGame(host User) KahootGame {
-	trivias := make([]Question, 0)
-	users := make([]User, 0)
-	pin := "123534" //TODO: Use random generator
-	CurrentQuestion := 0
-	TotalQuestions := 0
-	IsTimeout := false
-	IsStarted := false
-	IsScoreSent := false
-	return KahootGame{
-		trivias,
-		host,
-		users,
-		pin,
-		CurrentQuestion,
-		TotalQuestions,
-		IsTimeout,
-		IsStarted,
-		IsScoreSent,
+func initGame() {
+	game = &KahootGame{
+		questions:       make([]Question, 0),
+		answers:         make([]Answer, 0),
+		host:            User{}, // TODO: Revisar si vamos a tener un host
+		users:           make([]User, 0),
+		pin:             "",
+		CurrentQuestion: 0,
+		TotalQuestions:  0,
+		IsTimeout:       false,
+		IsStarted:       false,
+		IsScoreSent:     false,
 	}
 }
 
-func NewKahootGameTrivias(host User, trivias []Question) KahootGame {
-	users := make([]User, 0)
-	pin := "123534" //TODO: Use random generator
-	CurrentQuestion := 0
-	TotalQuestions := 0
-	IsTimeout := false
-	IsStarted := false
-	IsScoreSent := false
-	return KahootGame{
-		trivias,
-		host,
-		users,
-		pin,
-		CurrentQuestion,
-		TotalQuestions,
-		IsTimeout,
-		IsStarted,
-		IsScoreSent,
+func NewKahootGame(rm *data.RepositoryManager) *KahootGame {
+	once.Do(func() {
+		once.Do(initGame)
+		game.rm = rm
+		game.IsStarted = true
+	})
+
+	return game
+}
+
+func (kg *KahootGame) Start(pin string) error {
+	kg.pin = pin
+	if err := kg.searchKahoot(); err != nil {
+		return errors.New("An error occurred while getting kahoot: " + err.Error())
 	}
-}
 
-func (kg *KahootGame) PublishTrivia(trivia Question) (int, error) {
-	// TODO: Validate trivia
-	kg.trivias = append(kg.trivias, trivia)
-	return trivia.ID, nil
-}
+	if err := kg.searchQuestions(); err != nil {
+		return errors.New("An error occurred while getting questions: " + err.Error())
+	}
 
-func (kg *KahootGame) AddUser(user User) error {
-	// TODO: Validate user
-	kg.users = append(kg.users, user)
+	if err := kg.searchAnswers(); err != nil {
+		return errors.New("An error occurred while getting answers: " + err.Error())
+	}
+
+	kg.CurrentQuestion = kg.questions[0].ID
+	kg.IsStarted = true
 	return nil
 }
 
-func (kg *KahootGame) GetUsers() []User {
-	return kg.users
+func (kg *KahootGame) searchKahoot() error {
+	kahoot, err := kg.rm.KahootRepository.GetByPin(kg.pin);
+	if kahoot == nil && err == nil {
+		return errors.New("Room " + kg.pin + " not found")
+	}
+	if err != nil {
+		return err
+	}
+
+	kg.kahoot = kahoot
+	return nil
 }
 
-func (kg *KahootGame) GetPin() string {
-	return kg.pin
+func (kg *KahootGame) searchQuestions() error {
+	questions, err := kg.rm.QuestionRepository.GetAllByKahootID(kg.kahoot.ID)
+	if len(questions) == 0 && err == nil {
+		return errors.New("Questions not found for kahoot: " + kg.pin)
+	}
+	if err != nil {
+		return err
+	}
+
+	kg.questions = questions
+	kg.TotalQuestions = len(questions)
+	return nil
+}
+
+func (kg *KahootGame) searchAnswers() error {
+	answers, err := kg.rm.AnswerRepository.GetAllByKahootID(kg.kahoot.ID)
+	if len(answers) == 0 && err == nil {
+		return errors.New("Answers not found for kahoot: " + kg.pin)
+	}
+	if err != nil {
+		return err
+	}
+
+	kg.answers = answers
+	return nil
+}
+
+func (kg *KahootGame) GetCurrentAnswerIds() []int {
+	var ids []int = make([]int, 0)
+
+	for _, answer := range kg.answers {
+		ids = append(ids, answer.ID)
+	}
+
+	return ids
 }
