@@ -38,7 +38,7 @@ type Answer struct {
 	questionId int    `json:"question_id"`
 	answerId   int    `json:"answer_id"`
 	token      string `json:"token"`
-	IsTimeout  bool   `json:"is_timeout" default:false` //TODO: Por qué es necesario este campo?
+	IsTimeout  bool   `json:"is_timeout" default:false` //TODO: Por qué es necesario este campo? para que process answer lo compute como 0 puntos
 }
 
 func NewServer(kahootController *controllers.KahootController) *Server {
