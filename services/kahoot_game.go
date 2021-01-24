@@ -44,9 +44,9 @@ func initGame() {
 
 func NewKahootGame(rm *data.RepositoryManager) *KahootGame {
 	once.Do(func() {
-		once.Do(initGame)
+		initGame()
 		game.rm = rm
-		game.IsStarted = true
+		game.IsStarted = false
 	})
 
 	return game
