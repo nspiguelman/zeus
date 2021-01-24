@@ -17,8 +17,6 @@ type Server struct {
 	router       *gin.Engine
 	kahootController *controllers.KahootController
 	socket *melody.Melody
-	channelKahoot chan Answer
-	answerToProcess []Answer
 }
 
 type Score struct {
@@ -34,18 +32,16 @@ type Question struct {
 }
 
 type Answer struct {
-	questionId int `json:"questionId"`
-	answerId int `json:"answerId"`
-	token string
-	IsTimeout bool `default:false`
+	QuestionId int `json:"questionId"`
+	AnswerId int `json:"answerId"`
+	Token string `json:"token,omitempty"`
+	IsTimeout bool `json:"token,omitempty"`
 }
 
 func NewServer(kahootController *controllers.KahootController) *Server {
 	router := gin.Default()
 	socket := melody.New()
-	answerToProcess := []Answer{}
-	channelKahoot := make(chan Answer)
-	return &Server{router, kahootController, socket, channelKahoot, answerToProcess}
+	return &Server{router, kahootController, socket}
 }
 
 func (s *Server) StartServer() {
@@ -64,7 +60,6 @@ func (s *Server) StartServer() {
 	//LOGIN ; Devuelve un token al usuario.
 	s.router.POST("/room/:pin/name/:name/login", func(c *gin.Context) {
 		name := c.Param("name")
-
 		var token = GenerateToken(name)
 		c.JSON(200, gin.H{
 			"token": token,
@@ -72,45 +67,37 @@ func (s *Server) StartServer() {
 	}) // Login users
 
 
-	//WEB SOCKET ; DONDE SE RECIBE LAS RESPUESTAS DE LOS CLIENTES
-	s.router.GET("/room/:pin/ws", func(c *gin.Context) {
-
+	//WEB SOCKET ;
+	s.router.GET("/room/:pin/ws", func(c *gin.Context)  {
 		s.socket.HandleRequest(c.Writer, c.Request)
-		s.socket.HandleMessage(func(x *melody.Session, msg []byte) {
-			fmt.Println("asd")
-			pin := c.Param("pin")
-			token := c.GetHeader("token")
-
-			answer := Answer{}
-			err := json.Unmarshal([]byte(msg), answer)
-
-			if err != nil {
-				panic(err.Error())
-			}
-
-			answer.token = token
-			if s.kahootController.KahootGames.IsTimeout {
-				answer.IsTimeout = true
-			}
-
-			fmt.Printf("%+v\n", answer)
-
-			go processAnswer(answer, pin, token, s.channelKahoot)
-			s.answerToProcess = append(s.answerToProcess,<-s.channelKahoot)
-		})
 	})
 
-	//CALCULAR PUNTAJES
-	s.router.GET("/room/:pin/calculateScores", func(c *gin.Context) {
-		go calculateScores(s.answerToProcess)
+	s.socket.HandleMessage(func(x *melody.Session, msg []byte) {
+		//pin := x.Request.Header.Get("pin")
+		token := x.Request.Header.Get("token")
+
+		answer := Answer{}
+		answer.Token = token
+
+		err := json.Unmarshal([]byte(msg), &answer)
+		if err != nil {
+			panic(err.Error())
+		}
+		answer.Token = token
+
+		if s.kahootController.KahootGames.IsTimeout {
+			answer.IsTimeout = true
+		}
+		processAnswer(answer)
+
 	})
 
 	//MANDA BROADCAST
 	s.router.GET("/room/:pin/send_question", func(c *gin.Context) {
 		// manejar el timeout con una nueva go routine
-		if !s.kahootController.KahootGames.IsScoreSent {
-			log.Panic("no fue enviado")
-		}
+		//if !s.kahootController.KahootGames.IsScoreSent {
+		//	log.Panic("no fue enviado")
+		//}
 		// setear timeout en false
 		go broadCastQuestion(s.socket)
 	})
@@ -118,25 +105,51 @@ func (s *Server) StartServer() {
 	s.router.Run()
 }
 
-func calculateScores(answers []Answer)()  {
-	//calcula puntajes desencolando la lista FILO y los serializa.
-	//y lanzar broadcast con pùntajes.
 
-	//var lastAnswer = answers[len(answers)-1] //guardo el ultimo
-	//answers[len(answers)-1] = "" // Erase element (write zero value)
-	//answers = answers[:len(answers)-1] // elimino el ultimo
 
-	fmt.Printf("%v", answers)
+func processAnswer(answer Answer) {
+	fmt.Println("processAnswer: Procesando respuesta:")
+	fmt.Printf("%+v\n", answer)
+
+	var score = calculateScore(answer)
+	err :=saveDbScore(score,answer.Token)
+	if err != nil {
+		panic(err.Error())
+	}
 }
 
-func processAnswer(answer Answer, pin string, token string, c chan Answer) {
-	c <- answer
+func saveDbScore(score int, user string) error{
+	//aca guardamos los datos . Redis
+	return nil
 }
+
+func calculateScore(answer Answer ) int{
+	//solo chequeo rta correcta, pero no estoy contemplando por ahora el orden de llegada.
+	var score = 0
+	if ( isAnswerCorrect(answer.QuestionId,answer.AnswerId) ){
+		score += 10
+	}
+	return score
+}
+
+func isAnswerCorrect(questionId int,answerId int ) bool{
+	//chequear en base rta correcta
+	return true
+}
+
+
+func broadCastScore(m *melody.Melody){
+	time.Sleep(2 * time.Second)
+	b := []byte("estos son los puntajes")
+	m.Broadcast(b)
+
+}
+
 
 
 func broadCastQuestion(m *melody.Melody){
 	time.Sleep(2 * time.Second)
-	b := []byte("{question: 1 = 1 ?}")
+	b := []byte("{\"typeMessage\": \"question\", \"questionId\": 23, \"answerIds\": [123, 234, 345]}")
 	m.Broadcast(b)
 
 }
@@ -147,8 +160,6 @@ func GenerateToken(name string) string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Hash to store:", string(hash))
-
 	hasher := md5.New()
 	hasher.Write(hash)
 	return hex.EncodeToString(hasher.Sum(nil))
