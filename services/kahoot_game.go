@@ -20,6 +20,7 @@ type KahootGame struct {
 	users           []domain.User
 	pin             string
 	CurrentQuestion int  // pregunta actual
+	CurrentQuestionIndex int // para iterar las questions
 	TotalQuestions  int  // total de preguntas
 	IsTimeout       bool // timeout de la pregunta
 	IsStarted       bool // ya empezo el kahoot, no se puede suscribir nadie
@@ -35,6 +36,7 @@ func initGame() {
 		users:           make([]domain.User, 0),
 		pin:             "",
 		CurrentQuestion: 0,
+		CurrentQuestionIndex: 0,
 		TotalQuestions:  0,
 		IsTimeout:       false,
 		IsStarted:       false,
@@ -62,12 +64,29 @@ func (kg *KahootGame) Start(pin string) error {
 		return errors.New("An error occurred while getting questions: " + err.Error())
 	}
 
-	if err := kg.searchAnswers(); err != nil {
+	if err := kg.searchAnswers(kg.questions[kg.CurrentQuestionIndex].ID); err != nil {
 		return errors.New("An error occurred while getting answers: " + err.Error())
 	}
 
-	kg.CurrentQuestion = kg.questions[0].ID
+	kg.CurrentQuestion = kg.questions[kg.CurrentQuestionIndex].ID
 	kg.IsStarted = true
+	kg.IsScoreSent = false
+	kg.IsTimeout = false
+	return nil
+}
+
+func (kg *KahootGame) NextQuestion(pin string) error {
+	if kg.CurrentQuestionIndex + 1 >= kg.TotalQuestions {
+		//TODO: enviar algún evento para game over, por ahora devolvemos error
+		return errors.New("Game Over")
+	}
+
+	kg.CurrentQuestionIndex++
+	if err := kg.searchAnswers(kg.questions[kg.CurrentQuestionIndex].ID); err != nil {
+		return errors.New("An error occurred while getting answers for question " + string(kg.CurrentQuestion) +  ": " + err.Error())
+	}
+
+	kg.CurrentQuestion = kg.questions[kg.CurrentQuestionIndex].ID
 	return nil
 }
 
@@ -98,8 +117,8 @@ func (kg *KahootGame) searchQuestions() error {
 	return nil
 }
 
-func (kg *KahootGame) searchAnswers() error {
-	answers, err := kg.rm.AnswerRepository.GetAllByKahootID(kg.kahoot.ID)
+func (kg *KahootGame) searchAnswers(questionID int) error {
+	answers, err := kg.rm.AnswerRepository.GetAllByQuestionID(questionID)
 	if len(answers) == 0 && err == nil {
 		return errors.New("Answers not found for kahoot: " + kg.pin)
 	}

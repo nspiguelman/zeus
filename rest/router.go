@@ -23,22 +23,22 @@ type Server struct {
 }
 
 type Score struct {
-	partialScore int    `json:"partial_score"`
-	isCorrect    bool   `json:"is_correct"`
-	typeMessage  string `json:"type_message" default:"score"`
+	PartialScore int    `json:"partial_score"`
+	IsCorrect    bool   `json:"is_correct"`
+	TypeMessage  string `json:"type_message"`
 }
 
 type Question struct {
 	QuestionId  int    `json:"question_id"`
-	answerIds   []int  `json:"answer_ids"`
-	typeMessage string `json:"type_message" default:"question"`
+	AnswerIds   []int  `json:"answer_ids"`
+	TypeMessage string `json:"type_message"`
 }
 
 type Answer struct {
-	questionId int    `json:"question_id"`
-	answerId   int    `json:"answer_id"`
-	token      string `json:"token"`
-	IsTimeout  bool   `json:"is_timeout" default:false` //TODO: Por qué es necesario este campo? para que process answer lo compute como 0 puntos
+	QuestionId int    `json:"question_id"`
+	AnswerId   int    `json:"answer_id"`
+	Token      string `json:"token"`
+	IsTimeout  bool   `json:"is_timeout"`
 }
 
 func NewServer(kahootController *controllers.KahootController) *Server {
@@ -87,7 +87,7 @@ func (s *Server) StartServer() {
 				panic(err.Error())
 			}
 
-			answer.token = token
+			answer.Token = token
 			if s.kahootController.KahootGames.IsTimeout {
 				answer.IsTimeout = true
 			}
@@ -118,12 +118,18 @@ func (s *Server) StartServer() {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot send next question. Score must be sent."})
 				return
 			}
+
+			if err := s.kahootController.KahootGames.NextQuestion(pin); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 		}
 
 		// setear timeout en false
 		go broadCastQuestion(s.socket, Question{
 			QuestionId: s.kahootController.KahootGames.CurrentQuestion,
-			answerIds: s.kahootController.KahootGames.GetCurrentAnswerIds(),
+			AnswerIds: s.kahootController.KahootGames.GetCurrentAnswerIds(),
+			TypeMessage: "question",
 		})
 	})
 
