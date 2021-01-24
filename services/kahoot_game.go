@@ -1,8 +1,9 @@
-package domain
+package services
 
 import (
 	"errors"
 	"github.com/nspiguelman/zeus/data"
+	"github.com/nspiguelman/zeus/domain"
 	"sync"
 )
 
@@ -12,11 +13,11 @@ var (
 )
 
 type KahootGame struct {
-	kahoot          *Kahoot
-	questions       []Question
-	answers         []Answer
-	host            User
-	users           []User
+	kahoot          *domain.Kahoot
+	questions       []domain.Question
+	answers         []domain.Answer
+	host            domain.User
+	users           []domain.User
 	pin             string
 	CurrentQuestion int  // pregunta actual
 	TotalQuestions  int  // total de preguntas
@@ -28,10 +29,10 @@ type KahootGame struct {
 
 func initGame() {
 	game = &KahootGame{
-		questions:       make([]Question, 0),
-		answers:         make([]Answer, 0),
-		host:            User{}, // TODO: Revisar si vamos a tener un host
-		users:           make([]User, 0),
+		questions:       make([]domain.Question, 0),
+		answers:         make([]domain.Answer, 0),
+		host:            domain.User{}, // TODO: Revisar si vamos a tener un host
+		users:           make([]domain.User, 0),
 		pin:             "",
 		CurrentQuestion: 0,
 		TotalQuestions:  0,

@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nspiguelman/zeus/data"
 	"github.com/nspiguelman/zeus/domain"
+	"github.com/nspiguelman/zeus/services"
 	"gopkg.in/validator.v2"
 	"log"
 	"net/http"
@@ -11,7 +12,7 @@ import (
 
 type KahootController struct {
 	rm *data.RepositoryManager
-	KahootGames *domain.KahootGame
+	KahootGames *services.KahootGame
 }
 
 func NewKahootController() KahootController {
@@ -23,8 +24,8 @@ func NewKahootController() KahootController {
 	repositoryManager := data.NewRepositoryManager(dbData)
 
 	return KahootController{
-		rm: repositoryManager,
-		KahootGames: domain.NewKahootGame(repositoryManager),
+		rm:          repositoryManager,
+		KahootGames: services.NewKahootGame(repositoryManager),
 	}
 }
 
@@ -93,7 +94,7 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 			}
 
 			answer := domain.NewAnswer(question.ID, answerNo, answerInput)
-			if err := kc.answerRepository.Create(answer); err != nil {
+			if err := kc.rm.AnswerRepository.Create(answer); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error creating answer: " + err.Error() })
 				return
 			}
