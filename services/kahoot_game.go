@@ -112,7 +112,7 @@ func (kg *KahootGame) searchAnswers() error {
 }
 
 func (kg *KahootGame) GetCurrentAnswerIds() []int {
-	var ids []int = make([]int, 0)
+	var ids = make([]int, 0)
 
 	for _, answer := range kg.answers {
 		ids = append(ids, answer.ID)
