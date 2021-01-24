@@ -147,8 +147,8 @@ func processAnswer(answer Answer, pin string, token string, c chan Answer) {
 
 func broadCastQuestion(m *melody.Melody, question Question) {
 	time.Sleep(2 * time.Second)
-	b := []byte("{question: 1 = 1 ?}")
-	m.Broadcast(b)
+	msg, _ := json.Marshal(question)
+	m.Broadcast(msg)
 }
 
 func GenerateToken(name string) string {
