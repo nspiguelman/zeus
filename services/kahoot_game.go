@@ -1,10 +1,18 @@
 package services
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/nspiguelman/zeus/data"
 	"github.com/nspiguelman/zeus/domain"
+	"golang.org/x/crypto/bcrypt"
+	"gopkg.in/olahol/melody.v1"
+	"log"
 	"sync"
+	"time"
 )
 
 var (
@@ -26,6 +34,7 @@ type KahootGame struct {
 	IsStarted       bool // ya empezo el kahoot, no se puede suscribir nadie
 	IsScoreSent     bool // la siguiente pregunta solo puede ser enviada cuando el score sea notificado
 	rm              *data.RepositoryManager
+	ArrivalOrder int // se setea en 0 en cada broadcast y se usa como un contador para tener el orden de llegada
 }
 
 func initGame() {
@@ -139,3 +148,53 @@ func (kg *KahootGame) GetCurrentAnswerIds() []int {
 
 	return ids
 }
+
+func (kg *KahootGame) GenerateToken(name string) string {
+	// pasar a jwt
+	hash, err := bcrypt.GenerateFromPassword([]byte(name), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatal(err)
+	}
+	hasher := md5.New()
+	hasher.Write(hash)
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+
+func (kg *KahootGame) ProcessAnswer(answer domain.AnswerMessage) error  {
+	fmt.Println("processAnswer: Procesando respuesta:")
+	fmt.Printf("%+v\n", answer)
+
+	var score = calculateScore(answer)
+	err :=saveDbScore(score,answer.Token)
+	if err != nil {
+		panic(err.Error())
+	}
+	return nil
+}
+
+func saveDbScore(score int, user string) error{
+	//aca guardamos los datos . Redis
+	return nil
+}
+
+func calculateScore(answer domain.AnswerMessage ) int{
+	//solo chequeo rta correcta, pero no estoy contemplando por ahora el orden de llegada.
+	var score = 0
+	if ( isAnswerCorrect(answer.QuestionId,answer.AnswerId) ){
+		score += 10
+	}
+	return score
+}
+
+func isAnswerCorrect(questionId int,answerId int ) bool{
+	//chequear en base rta correcta
+	return true
+}
+
+func (kg *KahootGame) BroadCastQuestion(m *melody.Melody, question domain.QuestionMessage) {
+	time.Sleep(2 * time.Second)
+	msg, _ := json.Marshal(question)
+	m.Broadcast(msg)
+}
+

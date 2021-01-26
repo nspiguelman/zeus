@@ -15,7 +15,7 @@ type Answer struct {
 	IsTrue      bool   `json:"is_true"`
 }
 
-func NewQuestion(kahootID int, input QuestionInput) *Question {
+func NewQuestion(kahootID int, input QuestionInput) *Question{
 	return &Question{
 		Question:    input.Question,
 		Description: input.Description,
