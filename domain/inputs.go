@@ -15,6 +15,7 @@ type QuestionInput struct {
 	Answers     []AnswerInput `json:"answers" validate:"min=2,max=4"`
 }
 
+
 type AnswerInput struct {
 	Description string `json:"description"`
 	IsTrue      bool   `json:"is_true"`

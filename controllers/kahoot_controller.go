@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/nspiguelman/zeus/data"
 	"github.com/nspiguelman/zeus/domain"
 	"github.com/nspiguelman/zeus/services"
+	"gopkg.in/olahol/melody.v1"
 	"gopkg.in/validator.v2"
 	"log"
 	"net/http"
@@ -29,6 +31,12 @@ func NewKahootController() KahootController {
 	}
 }
 
+func (kc *KahootController) Ping() gin.HandlerFunc {
+	return func (c *gin.Context) {
+		c.JSON(200, gin.H{ "message": "pong" })
+	}
+}
+
 func (kc *KahootController) CreateKahoot() func(c *gin.Context) {
 	return func (c *gin.Context) {
 		var kahootInput domain.KahootInput
@@ -47,7 +55,6 @@ func (kc *KahootController) CreateKahoot() func(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{ "error": err.Error() })
 			return
 		}
-
 		c.JSON(http.StatusCreated, kahoot)
 	}
 }
@@ -109,4 +116,72 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 			"answers": answers,
 		})
  	}
+}
+
+func (kc *KahootController) Login() gin.HandlerFunc {
+	return func (c *gin.Context) {
+		name := c.Param("name")
+		var token = kc.KahootGames.GenerateToken(name)
+		c.JSON(200, gin.H{
+			"token": token,
+		})
+	}
+}
+
+func (kc *KahootController) HandShake(socket *melody.Melody) gin.HandlerFunc {
+	return func (c *gin.Context) {
+		socket.HandleRequest(c.Writer, c.Request)
+	}
+}
+
+func (kc *KahootController) HandleMessage(socket *melody.Melody) {
+	socket.HandleMessage(func(x *melody.Session, msg []byte) {
+		//pin := x.Request.Header.Get("pin")
+		kc.KahootGames.ArrivalOrder += 1
+		token := x.Request.Header.Get("token")
+
+		answer := domain.AnswerMessage{}
+		answer.Token = token
+
+		err := json.Unmarshal([]byte(msg), &answer)
+		if err != nil {
+			panic(err.Error())
+		}
+		answer.Token = token
+
+		if kc.KahootGames.IsTimeout {
+			answer.IsTimeout = true
+		}
+		kc.KahootGames.ProcessAnswer(answer)
+	})
+}
+
+// TODO: Analizar si la goroutine muere antes. Porque tenemos la duda si la función termina e interrumpe la goroutine
+func (kc *KahootController) SendQuestion(socket *melody.Melody) gin.HandlerFunc {
+	return func(c *gin.Context){
+		pin := c.Param("pin")
+		if !kc.KahootGames.IsStarted {
+			if err := kc.KahootGames.Start(pin); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		} else {
+			if !kc.KahootGames.IsScoreSent {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot send next question. Score must be sent."})
+				return
+			}
+
+			if err := kc.KahootGames.NextQuestion(pin); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		}
+
+		// setear timeout en false
+		kc.KahootGames.BroadCastQuestion(socket, domain.QuestionMessage{
+			QuestionId: kc.KahootGames.CurrentQuestion,
+			AnswerIds: kc.KahootGames.GetCurrentAnswerIds(),
+			TypeMessage: "question",
+		})
+	}
 }
