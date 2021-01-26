@@ -10,38 +10,43 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/olahol/melody.v1"
 	"log"
+	"net/http"
 	"time"
 )
 
 type Server struct {
-	router       *gin.Engine
+	router           *gin.Engine
 	kahootController *controllers.KahootController
-	socket *melody.Melody
+	socket           *melody.Melody
+	channelKahoot    chan Answer
+	answerToProcess  []Answer
 }
 
 type Score struct {
-	partialScore int
-	isCorrect bool
-	typeMessage string `default:"score"`
+	PartialScore int    `json:"partialScore"`
+	IsCorrect    bool   `json:"isCorrect"`
+	TypeMessage  string `json:"typeMessage"`
 }
 
 type Question struct {
-	QuestionId int
-	answerIds []int
-	typeMessage string `default:"question"`
+	QuestionId  int    `json:"questionId"`
+	AnswerIds   []int  `json:"answerIds"`
+	TypeMessage string `json:"typeMessage"`
 }
 
 type Answer struct {
-	QuestionId int `json:"questionId"`
-	AnswerId int `json:"answerId"`
-	Token string `json:"token,omitempty"`
-	IsTimeout bool `json:"token,omitempty"`
+	QuestionId int    `json:"questionId"`
+	AnswerId   int    `json:"answerId"`
+	Token      string `json:"token"`
+	IsTimeout  bool   `json:"isTimeout"`
 }
 
 func NewServer(kahootController *controllers.KahootController) *Server {
 	router := gin.Default()
 	socket := melody.New()
-	return &Server{router, kahootController, socket}
+	answerToProcess := []Answer{}
+	channelKahoot := make(chan Answer)
+	return &Server{router, kahootController, socket, channelKahoot, answerToProcess}
 }
 
 func (s *Server) StartServer() {
@@ -55,7 +60,6 @@ func (s *Server) StartServer() {
 	/*END POINTS*/
 	s.router.POST("/room", s.kahootController.CreateKahoot())
 	s.router.POST("/room/:pin/question", s.kahootController.CreateQuestion())
-
 
 	//LOGIN ; Devuelve un token al usuario.
 	s.router.POST("/room/:pin/name/:name/login", func(c *gin.Context) {
@@ -98,8 +102,30 @@ func (s *Server) StartServer() {
 		//if !s.kahootController.KahootGames.IsScoreSent {
 		//	log.Panic("no fue enviado")
 		//}
+		pin := c.Param("pin")
+		if !s.kahootController.KahootGames.IsStarted {
+			if err := s.kahootController.KahootGames.Start(pin); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		} else {
+			if !s.kahootController.KahootGames.IsScoreSent {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot send next question. Score must be sent."})
+				return
+			}
+
+			if err := s.kahootController.KahootGames.NextQuestion(pin); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		}
+
 		// setear timeout en false
-		go broadCastQuestion(s.socket)
+		go broadCastQuestion(s.socket, Question{
+			QuestionId: s.kahootController.KahootGames.CurrentQuestion,
+			AnswerIds: s.kahootController.KahootGames.GetCurrentAnswerIds(),
+			TypeMessage: "question",
+		})
 	})
 
 	s.router.Run()
@@ -146,12 +172,10 @@ func broadCastScore(m *melody.Melody){
 }
 
 
-
-func broadCastQuestion(m *melody.Melody){
+func broadCastQuestion(m *melody.Melody, question Question) {
 	time.Sleep(2 * time.Second)
-	b := []byte("{\"typeMessage\": \"question\", \"questionId\": 23, \"answerIds\": [123, 234, 345]}")
-	m.Broadcast(b)
-
+	msg, _ := json.Marshal(question)
+	m.Broadcast(msg)
 }
 
 func GenerateToken(name string) string {
@@ -164,5 +188,3 @@ func GenerateToken(name string) string {
 	hasher.Write(hash)
 	return hex.EncodeToString(hasher.Sum(nil))
 }
-
-
