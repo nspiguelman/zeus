@@ -4,36 +4,28 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nspiguelman/zeus/data"
 	"github.com/nspiguelman/zeus/domain"
+	"github.com/nspiguelman/zeus/services"
 	"gopkg.in/validator.v2"
 	"log"
 	"net/http"
 )
 
 type KahootController struct {
-	kahootGames []domain.KahootGame
-	kahootRepository *data.KahootRepository
-	userRepository *data.UserRepository
-	questionRepository *data.QuestionRepository
-	answerRepository *data.AnswerRepository
+	rm *data.RepositoryManager
+	KahootGames *services.KahootGame
 }
 
 func NewKahootController() KahootController {
-	kahootGames := make([]domain.KahootGame, 0)
 	dbData := data.New()
+	sqlDB, _ := dbData.DB.DB()
+	if err := sqlDB.Ping(); err != nil {
+		log.Panic(err.Error())
+	}
+	repositoryManager := data.NewRepositoryManager(dbData)
+
 	return KahootController{
-		kahootGames: kahootGames,
-		kahootRepository: &data.KahootRepository{
-			Data: dbData,
-		},
-		userRepository: &data.UserRepository{
-			Data: dbData,
-		},
-		questionRepository: &data.QuestionRepository{
-			Data: dbData,
-		},
-		answerRepository: &data.AnswerRepository{
-			Data: dbData,
-		},
+		rm:          repositoryManager,
+		KahootGames: services.NewKahootGame(repositoryManager),
 	}
 }
 
@@ -51,7 +43,7 @@ func (kc *KahootController) CreateKahoot() func(c *gin.Context) {
 		}
 
 		kahoot := domain.NewKahoot(kahootInput)
-		if err := kc.kahootRepository.Create(kahoot); err != nil {
+		if err := kc.rm.KahootRepository.Create(kahoot); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{ "error": err.Error() })
 			return
 		}
@@ -63,8 +55,8 @@ func (kc *KahootController) CreateKahoot() func(c *gin.Context) {
 func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 	return func (c *gin.Context) {
 		pin := c.Param("pin")
-		log.Print(pin)
-		kahoot, err := kc.kahootRepository.GetByPin(pin);
+
+		kahoot, err := kc.rm.KahootRepository.GetByPin(pin);
 		if kahoot == nil && err == nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Room " + pin + " not found"})
 			return
@@ -86,7 +78,7 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 		}
 
 		question := domain.NewQuestion(kahoot.ID, questionInput)
-		if err := kc.questionRepository.Create(question); err != nil {
+		if err := kc.rm.QuestionRepository.Create(question); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error saving question: " + err.Error() })
 			return
 		}
@@ -102,7 +94,7 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 			}
 
 			answer := domain.NewAnswer(question.ID, answerNo, answerInput)
-			if err := kc.answerRepository.Create(answer); err != nil {
+			if err := kc.rm.AnswerRepository.Create(answer); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error creating answer: " + err.Error() })
 				return
 			}
