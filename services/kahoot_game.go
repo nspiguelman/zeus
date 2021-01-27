@@ -34,7 +34,7 @@ type KahootGame struct {
 	IsStarted       bool // ya empezo el kahoot, no se puede suscribir nadie
 	IsScoreSent     bool // la siguiente pregunta solo puede ser enviada cuando el score sea notificado
 	rm              *data.RepositoryManager
-	ArrivalOrder int // se setea en 0 en cada broadcast y se usa como un contador para tener el orden de llegada
+	ArrivalOrder 	int // se setea en 0 en cada broadcast y se usa como un contador para tener el orden de llegada
 }
 
 func initGame() {
@@ -50,6 +50,7 @@ func initGame() {
 		IsTimeout:       false,
 		IsStarted:       false,
 		IsScoreSent:     false,
+		ArrivalOrder: 0,
 	}
 }
 
