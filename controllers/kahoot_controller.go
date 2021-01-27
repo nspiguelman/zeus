@@ -120,6 +120,7 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 
 func (kc *KahootController) Login() gin.HandlerFunc {
 	return func (c *gin.Context) {
+		// TODO: persistir en la db
 		name := c.Param("name")
 		var token = kc.KahootGames.GenerateToken(name)
 		c.JSON(200, gin.H{
@@ -135,8 +136,12 @@ func (kc *KahootController) HandShake(socket *melody.Melody) gin.HandlerFunc {
 }
 
 func (kc *KahootController) HandleMessage(socket *melody.Melody) {
+	// TODO: 1. Hacer un channel donde reciba todas las respuesta del cliente
+	// TODO: 2. Hacer una goroutine que este todo el tiempo escuchando al chanel para procesar la respuesta y guardar en bdd (siempre y cuando el canal este abierto , lo cual es determinado por el timeOut de la maquina de estado
+	// TODO: 3. Cerrar el channel cuando haya timeout.
+	// TODO: 4. Analizar si mover el timeout de la maquina de estados y dejarlo como una función timer
 	socket.HandleMessage(func(x *melody.Session, msg []byte) {
-		//pin := x.Request.Header.Get("pin")
+		// pin := x.Request.Header.Get("pin")
 		kc.KahootGames.ArrivalOrder += 1
 		token := x.Request.Header.Get("token")
 
@@ -155,6 +160,7 @@ func (kc *KahootController) HandleMessage(socket *melody.Melody) {
 		kc.KahootGames.ProcessAnswer(answer)
 	})
 }
+
 
 // TODO: Analizar si la goroutine muere antes. Porque tenemos la duda si la función termina e interrumpe la goroutine
 func (kc *KahootController) SendQuestion(socket *melody.Melody) gin.HandlerFunc {
