@@ -142,7 +142,6 @@ func (kc *KahootController) HandleMessage(socket *melody.Melody) {
 	// TODO: 4. Analizar si mover el timeout de la maquina de estados y dejarlo como una función timer
 	socket.HandleMessage(func(x *melody.Session, msg []byte) {
 		// pin := x.Request.Header.Get("pin")
-		kc.KahootGames.ArrivalOrder += 1
 		token := x.Request.Header.Get("token")
 
 		answer := domain.AnswerMessage{}
@@ -154,10 +153,7 @@ func (kc *KahootController) HandleMessage(socket *melody.Melody) {
 		}
 		answer.Token = token
 
-		if kc.KahootGames.IsTimeout {
-			answer.IsTimeout = true
-		}
-		kc.KahootGames.ProcessAnswer(answer)
+		kc.KahootGames.Answer(answer)
 	})
 }
 
@@ -183,7 +179,6 @@ func (kc *KahootController) SendQuestion(socket *melody.Melody) gin.HandlerFunc 
 			}
 		}
 
-		// setear timeout en false
 		kc.KahootGames.BroadCastQuestion(socket, domain.QuestionMessage{
 			QuestionId: kc.KahootGames.CurrentQuestion,
 			AnswerIds: kc.KahootGames.GetCurrentAnswerIds(),

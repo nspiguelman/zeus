@@ -21,20 +21,21 @@ var (
 )
 
 type KahootGame struct {
-	kahoot          *domain.Kahoot
-	questions       []domain.Question
-	answers         []domain.Answer
-	host            domain.User
-	users           []domain.User
-	pin             string
-	CurrentQuestion int  // pregunta actual
-	CurrentQuestionIndex int // para iterar las questions
-	TotalQuestions  int  // total de preguntas
-	IsTimeout       bool // timeout de la pregunta
-	IsStarted       bool // ya empezo el kahoot, no se puede suscribir nadie
-	IsScoreSent     bool // la siguiente pregunta solo puede ser enviada cuando el score sea notificado
-	rm              *data.RepositoryManager
-	ArrivalOrder 	int // se setea en 0 en cada broadcast y se usa como un contador para tener el orden de llegada
+	kahoot               *domain.Kahoot
+	questions            []domain.Question
+	answers              []domain.Answer
+	host                 domain.User
+	users                []domain.User
+	pin                  string
+	CurrentQuestion      int  // pregunta actual
+	CurrentQuestionIndex int  // para iterar las questions
+	TotalQuestions       int  // total de preguntas
+	IsTimeout            bool // timeout de la pregunta
+	IsStarted            bool // ya empezo el kahoot, no se puede suscribir nadie
+	IsScoreSent          bool // la siguiente pregunta solo puede ser enviada cuando el score sea notificado
+	rm                   *data.RepositoryManager
+	ArrivalOrder         int // se setea en 0 en cada broadcast y se usa como un contador para tener el orden de llegada
+	answerChannel        chan domain.AnswerMessage
 }
 
 func initGame() {
@@ -174,6 +175,7 @@ func (kg *KahootGame) ProcessAnswer(answer domain.AnswerMessage) error  {
 	return nil
 }
 
+
 func saveDbScore(score int, user string) error{
 	//aca guardamos los datos . Redis
 	return nil
@@ -194,8 +196,47 @@ func isAnswerCorrect(questionId int,answerId int ) bool{
 }
 
 func (kg *KahootGame) BroadCastQuestion(m *melody.Melody, question domain.QuestionMessage) {
-	time.Sleep(2 * time.Second)
 	msg, _ := json.Marshal(question)
-	m.Broadcast(msg)
+
+	kg.setRound(5)
+	_ = m.Broadcast(msg)
+	go kg.processAnswers()
 }
 
+func (kg *KahootGame) Answer(answer domain.AnswerMessage) {
+	if kg.IsTimeout {
+		log.Println("timeout:", answer)
+	} else {
+		kg.answerChannel <- answer
+	}
+}
+
+func (kg *KahootGame) setRound(timeout int) {
+	// setea parametros de la maquina de estados
+	// crea el canal de respuestas y timea el cierre
+	kg.IsTimeout = false
+	kg.IsScoreSent = false
+
+	kg.answerChannel = make(chan domain.AnswerMessage, 1000)
+	timer := time.NewTimer(time.Duration(timeout) * time.Second)
+	go func(){
+		<-timer.C
+		kg.IsTimeout = true
+		close(kg.answerChannel)
+	}()
+}
+
+func (kg *KahootGame) processAnswers() {
+	log.Println("begin processing answers")
+	for answer := range kg.answerChannel {
+		log.Println("processing :", answer)
+	}
+	log.Println("end processing answers")
+	go kg.sendScores()
+}
+
+func (kg *KahootGame) sendScores() {
+	log.Println("begin processing answers")
+	kg.IsScoreSent = true
+	log.Println("end processing answers")
+}
