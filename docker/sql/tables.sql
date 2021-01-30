@@ -29,7 +29,7 @@ CREATE TABLE answer (
 CREATE TABLE kahootUser (
     id SERIAL NOT NULL PRIMARY KEY,
     username VARCHAR(255),
-    score INTEGER,
+    token VARCHAR 200,
     kahoot_id BIGINT NOT NULL,
     CONSTRAINT fk_user_kahoot
         FOREIGN KEY (kahoot_id)
