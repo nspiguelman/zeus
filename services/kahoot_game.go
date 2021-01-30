@@ -24,8 +24,8 @@ type KahootGame struct {
 	kahoot               *domain.Kahoot
 	questions            []domain.Question
 	answers              []domain.Answer
-	host                 domain.User
-	users                []domain.User
+	host                 domain.Kahootuser
+	users                []domain.Kahootuser
 	pin                  string
 	CurrentQuestion      int  // pregunta actual
 	CurrentQuestionIndex int  // para iterar las questions
@@ -42,8 +42,8 @@ func initGame() {
 	game = &KahootGame{
 		questions:       make([]domain.Question, 0),
 		answers:         make([]domain.Answer, 0),
-		host:            domain.User{}, // TODO: Revisar si vamos a tener un host
-		users:           make([]domain.User, 0),
+		host:            domain.Kahootuser{}, // TODO: Revisar si vamos a tener un host
+		users:           make([]domain.Kahootuser, 0),
 		pin:             "",
 		CurrentQuestion: 0,
 		CurrentQuestionIndex: 0,

@@ -1,12 +1,16 @@
 package domain
 
-type User struct {
+type Kahootuser struct {
 	ID       uint   `json:"id"`
 	Username string `json:"username"`
-	Score    uint   `json:"score,omitempty"`
-	KahootId uint	`json:"kahoot_id"`
+	Token string 	`json:"token"`
+	KahootId int	`json:"kahoot_id"`
 }
 
-func NewUser(username string) *User {
-	return &User{Username: username}
+func NewUser(username string, token string, kahootID int) *Kahootuser{
+	return &Kahootuser{
+		Username: username,
+		Token:    token,
+		KahootId: kahootID,
+	}
 }

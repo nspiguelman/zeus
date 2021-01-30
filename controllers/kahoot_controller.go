@@ -120,9 +120,27 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 
 func (kc *KahootController) Login() gin.HandlerFunc {
 	return func (c *gin.Context) {
-		// TODO: persistir en la db
+
 		name := c.Param("name")
 		var token = kc.KahootGames.GenerateToken(name)
+
+		pin := c.Param("pin")
+		kahoot, err := kc.rm.KahootRepository.GetByPin(pin);
+		if kahoot == nil && err == nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Room " + pin + " not found"})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		Kahoot_user := domain.NewUser(name,token,kahoot.ID)
+
+		if err := kc.rm.UserRepository.Create(Kahoot_user); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error saving user: " + err.Error() })
+			return
+		}
 		c.JSON(200, gin.H{
 			"token": token,
 		})
