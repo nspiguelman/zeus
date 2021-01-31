@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/nspiguelman/zeus/data"
 	"github.com/nspiguelman/zeus/domain"
 	"golang.org/x/crypto/bcrypt"
@@ -163,36 +162,29 @@ func (kg *KahootGame) GenerateToken(name string) string {
 }
 
 
-func (kg *KahootGame) ProcessAnswer(answer domain.AnswerMessage) error  {
-	fmt.Println("processAnswer: Procesando respuesta:")
-	fmt.Printf("%+v\n", answer)
-
-	var score = calculateScore(answer)
-	err :=saveDbScore(score,answer.Token)
-	if err != nil {
-		panic(err.Error())
-	}
-	return nil
-}
-
 
 func saveDbScore(score int, user string) error{
 	//aca guardamos los datos . Redis
 	return nil
 }
 
-func calculateScore(answer domain.AnswerMessage ) int{
-	//solo chequeo rta correcta, pero no estoy contemplando por ahora el orden de llegada.
+func (kg *KahootGame) CalculateScore(answer domain.AnswerMessage ) int{
 	var score = 0
-	if ( isAnswerCorrect(answer.QuestionId,answer.AnswerId) ){
-		score += 10
+	if ( kg.isAnswerCorrect (answer) ){
+		score += 10 * kg.ArrivalOrder
+		kg.ArrivalOrder--
+		log.Println("respuesta: correcta - puntaje : ", score , " - respuesta id: " , answer.AnswerId)
 	}
+
 	return score
 }
 
-func isAnswerCorrect(questionId int,answerId int ) bool{
-	//chequear en base rta correcta
-	return true
+func (kg *KahootGame) isAnswerCorrect(answer domain.AnswerMessage) bool {
+	answers, err := kg.rm.AnswerRepository.CheckAnswer(answer.AnswerId)
+	if err != nil {
+		panic(err)
+	}
+	return answers.IsTrue
 }
 
 func (kg *KahootGame) BroadCastQuestion(m *melody.Melody, question domain.QuestionMessage) {
@@ -216,6 +208,7 @@ func (kg *KahootGame) setRound(timeout int) {
 	// crea el canal de respuestas y timea el cierre
 	kg.IsTimeout = false
 	kg.IsScoreSent = false
+	kg.ArrivalOrder = 100
 
 	kg.answerChannel = make(chan domain.AnswerMessage, 1000)
 	timer := time.NewTimer(time.Duration(timeout) * time.Second)
@@ -229,7 +222,12 @@ func (kg *KahootGame) setRound(timeout int) {
 func (kg *KahootGame) processAnswers() {
 	log.Println("begin processing answers")
 	for answer := range kg.answerChannel {
-		log.Println("processing :", answer)
+		var score = kg.CalculateScore(answer)
+		err :=saveDbScore(score,answer.Token)
+		if err != nil {
+			panic(err.Error())
+		}
+
 	}
 	log.Println("end processing answers")
 	go kg.sendScores()
