@@ -120,9 +120,27 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 
 func (kc *KahootController) Login() gin.HandlerFunc {
 	return func (c *gin.Context) {
-		// TODO: persistir en la db
+
 		name := c.Param("name")
 		var token = kc.KahootGames.GenerateToken(name)
+
+		pin := c.Param("pin")
+		kahoot, err := kc.rm.KahootRepository.GetByPin(pin);
+		if kahoot == nil && err == nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Room " + pin + " not found"})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		Kahoot_user := domain.NewUser(name,token,kahoot.ID)
+
+		if err := kc.rm.UserRepository.Create(Kahoot_user); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error saving user: " + err.Error() })
+			return
+		}
 		c.JSON(200, gin.H{
 			"token": token,
 		})
@@ -142,7 +160,6 @@ func (kc *KahootController) HandleMessage(socket *melody.Melody) {
 	// TODO: 4. Analizar si mover el timeout de la maquina de estados y dejarlo como una función timer
 	socket.HandleMessage(func(x *melody.Session, msg []byte) {
 		// pin := x.Request.Header.Get("pin")
-		kc.KahootGames.ArrivalOrder += 1
 		token := x.Request.Header.Get("token")
 
 		answer := domain.AnswerMessage{}
@@ -154,10 +171,7 @@ func (kc *KahootController) HandleMessage(socket *melody.Melody) {
 		}
 		answer.Token = token
 
-		if kc.KahootGames.IsTimeout {
-			answer.IsTimeout = true
-		}
-		kc.KahootGames.ProcessAnswer(answer)
+		kc.KahootGames.Answer(answer)
 	})
 }
 
@@ -183,7 +197,6 @@ func (kc *KahootController) SendQuestion(socket *melody.Melody) gin.HandlerFunc 
 			}
 		}
 
-		// setear timeout en false
 		kc.KahootGames.BroadCastQuestion(socket, domain.QuestionMessage{
 			QuestionId: kc.KahootGames.CurrentQuestion,
 			AnswerIds: kc.KahootGames.GetCurrentAnswerIds(),

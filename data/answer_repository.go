@@ -30,4 +30,18 @@ func (ar AnswerRepository) GetAllByQuestionID(questionID int) ([]domain.Answer, 
 	return answers, nil
 }
 
+func (ar AnswerRepository) CheckAnswer(answer_id int) (domain.Answer, error) {
+	var answers domain.Answer
+	result := ar.Data.DB.Where("id = ?", answer_id).First(&answers)
+
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return domain.Answer{}, nil
+	}
+
+	if result.Error != nil {
+		return domain.Answer{}, result.Error
+	}
+
+	return answers, nil
+}
 
