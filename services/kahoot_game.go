@@ -69,15 +69,14 @@ func (kg *KahootGame) Start(pin string) error {
 	if err := kg.searchKahoot(); err != nil {
 		return errors.New("An error occurred while getting kahoot: " + err.Error())
 	}
-
 	if err := kg.searchQuestions(); err != nil {
 		return errors.New("An error occurred while getting questions: " + err.Error())
 	}
-
 	if err := kg.searchAnswers(kg.questions[kg.CurrentQuestionIndex].ID); err != nil {
 		return errors.New("An error occurred while getting answers: " + err.Error())
 	}
 
+	kg.ArrivalOrder = 0
 	kg.CurrentQuestion = kg.questions[kg.CurrentQuestionIndex].ID
 	kg.IsStarted = true
 	kg.IsScoreSent = false
@@ -91,6 +90,7 @@ func (kg *KahootGame) NextQuestion(pin string) error {
 		return errors.New("Game Over")
 	}
 
+	kg.ArrivalOrder = 0
 	kg.CurrentQuestionIndex++
 	if err := kg.searchAnswers(kg.questions[kg.CurrentQuestionIndex].ID); err != nil {
 		return errors.New("An error occurred while getting answers for question " + string(kg.CurrentQuestion) +  ": " + err.Error())
@@ -101,7 +101,7 @@ func (kg *KahootGame) NextQuestion(pin string) error {
 }
 
 func (kg *KahootGame) searchKahoot() error {
-	kahoot, err := kg.rm.KahootRepository.GetByPin(kg.pin);
+	kahoot, err := kg.rm.KahootRepository.GetByPin(kg.pin)
 	if kahoot == nil && err == nil {
 		return errors.New("Room " + kg.pin + " not found")
 	}
@@ -140,6 +140,11 @@ func (kg *KahootGame) searchAnswers(questionID int) error {
 	return nil
 }
 
+func (kg *KahootGame) setArrivalOrder() {
+	totalUsers := kg.rm.UserRepository.CountByPin(kg.pin)
+	kg.ArrivalOrder = totalUsers
+}
+
 func (kg *KahootGame) GetCurrentAnswerIds() []int {
 	var ids = make([]int, 0)
 
@@ -161,21 +166,29 @@ func (kg *KahootGame) GenerateToken(name string) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-
-
-func saveDbScore(score int, user string) error{
-	//aca guardamos los datos . Redis
+func (kg *KahootGame) saveDbScore(token string, score int) error {
+	currentScore, err := kg.rm.KahootRepository.GetScore(token)
+	if err != nil {
+		return err
+	}
+	newScore := currentScore + score
+	err = kg.rm.KahootRepository.SetScore(token, newScore)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (kg *KahootGame) CalculateScore(answer domain.AnswerMessage ) int{
-	var score = 0
-	if ( kg.isAnswerCorrect (answer) ){
-		score += 10 * kg.ArrivalOrder
-		kg.ArrivalOrder--
+// TODO: agregar el puntaje parametrizado
+func (kg *KahootGame) calculateScore(answer domain.AnswerMessage) int {
+	var score int
+	if kg.isAnswerCorrect (answer) {
+		if score = 100; kg.ArrivalOrder > 10 {
+			score = 1000 - kg.ArrivalOrder * 30
+		}
+		kg.ArrivalOrder++
 		log.Println("respuesta: correcta - puntaje : ", score , " - respuesta id: " , answer.AnswerId)
 	}
-
 	return score
 }
 
@@ -222,8 +235,8 @@ func (kg *KahootGame) setRound(timeout int) {
 func (kg *KahootGame) processAnswers() {
 	log.Println("begin processing answers")
 	for answer := range kg.answerChannel {
-		var score = kg.CalculateScore(answer)
-		err :=saveDbScore(score,answer.Token)
+		var score = kg.calculateScore(answer)
+		err := kg.saveDbScore(answer.Token, score)
 		if err != nil {
 			panic(err.Error())
 		}
@@ -237,4 +250,8 @@ func (kg *KahootGame) sendScores() {
 	log.Println("begin processing answers")
 	kg.IsScoreSent = true
 	log.Println("end processing answers")
+}
+
+func (kg *KahootGame) InitScore (token string) error {
+	return kg.rm.KahootRepository.SetScore(token, 0)
 }

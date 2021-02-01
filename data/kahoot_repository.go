@@ -2,6 +2,7 @@ package data
 
 import (
 	"errors"
+	"github.com/gomodule/redigo/redis"
 	"github.com/nspiguelman/zeus/domain"
 	"gorm.io/gorm"
 )
@@ -26,4 +27,17 @@ func (kr *KahootRepository) GetByPin(pin string) (*domain.Kahoot, error) {
 		return nil, result.Error
 	}
 	return &kahoot, nil
+}
+
+func (kr *KahootRepository) SetScore(token string, score int) error {
+	_, err := kr.Data.RedisDB.Do("SET", token, score)
+	return err
+}
+
+func (kr *KahootRepository) GetScore (token string) (int, error){
+	score, err := redis.Int(kr.Data.RedisDB.Do("GET", token))
+	if err != nil {
+		return 0, err
+	}
+	return score, nil
 }

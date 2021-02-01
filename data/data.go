@@ -36,7 +36,6 @@ func initDB() {
 
 func New() *Data {
 	once.Do(initDB)
-
 	return data
 }
 
