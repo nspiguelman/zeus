@@ -166,13 +166,15 @@ func (kg *KahootGame) GenerateToken(name string) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func (kg *KahootGame) saveDbScore(token string, score int) error {
-	currentScore, err := kg.rm.KahootRepository.GetScore(token)
+func (kg *KahootGame) saveDbScore(token string, scoreInput *domain.ScoreMessage) error {
+	score, err := kg.rm.KahootRepository.GetScore(token)
 	if err != nil {
 		return err
 	}
-	newScore := currentScore + score
-	err = kg.rm.KahootRepository.SetScore(token, newScore)
+
+	score.Score += scoreInput.Score
+	score.IsCorrect = scoreInput.IsCorrect
+	err = kg.rm.KahootRepository.SetScore(token, score)
 	if err != nil {
 		return err
 	}
@@ -180,16 +182,18 @@ func (kg *KahootGame) saveDbScore(token string, score int) error {
 }
 
 // TODO: agregar el puntaje parametrizado
-func (kg *KahootGame) calculateScore(answer domain.AnswerMessage) int {
+func (kg *KahootGame) calculateScore(answer domain.AnswerMessage) *domain.ScoreMessage {
 	var score int
-	if kg.isAnswerCorrect (answer) {
+	isCorrect := kg.isAnswerCorrect(answer)
+
+	if isCorrect {
 		if score = 100; kg.ArrivalOrder > 10 {
-			score = 1000 - kg.ArrivalOrder * 30
+			score = 1000 + kg.ArrivalOrder * 30
 		}
 		kg.ArrivalOrder++
 		log.Println("respuesta: correcta - puntaje : ", score , " - respuesta id: " , answer.AnswerId)
 	}
-	return score
+	return domain.NewScoreMessage(score, isCorrect)
 }
 
 func (kg *KahootGame) isAnswerCorrect(answer domain.AnswerMessage) bool {
@@ -204,8 +208,12 @@ func (kg *KahootGame) BroadCastQuestion(m *melody.Melody, question domain.Questi
 	msg, _ := json.Marshal(question)
 
 	kg.setRound(5)
-	_ = m.Broadcast(msg)
-	go kg.processAnswers()
+	err := m.Broadcast(msg)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	go kg.processAnswers(m)
 }
 
 func (kg *KahootGame) Answer(answer domain.AnswerMessage) {
@@ -232,26 +240,56 @@ func (kg *KahootGame) setRound(timeout int) {
 	}()
 }
 
-func (kg *KahootGame) processAnswers() {
+func (kg *KahootGame) processAnswers(m *melody.Melody) {
 	log.Println("begin processing answers")
+
 	for answer := range kg.answerChannel {
 		var score = kg.calculateScore(answer)
 		err := kg.saveDbScore(answer.Token, score)
 		if err != nil {
+			log.Panic(err.Error())
+		}
+	}
+
+	log.Println("end processing answers")
+
+	go kg.sendScores(m)
+}
+
+func (kg *KahootGame) sendScores(m *melody.Melody) {
+	log.Println("begin sending scores")
+	var users []domain.Kahootuser
+	users, err := kg.rm.UserRepository.GetAllUsers(kg.kahoot.ID)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	var scoreMessages = make(map[string]domain.ScoreMessage)
+	for _, user := range users {
+		scoreMessage, err := kg.rm.KahootRepository.GetScore(user.Token)
+		if err != nil {
 			panic(err.Error())
 		}
 
+		scoreMessages[user.Token] = *scoreMessage
 	}
-	log.Println("end processing answers")
-	go kg.sendScores()
-}
 
-func (kg *KahootGame) sendScores() {
-	log.Println("begin processing answers")
+	allScoreMessage := &domain.AllScoreMessage{
+		ScoreMessages: scoreMessages,
+		TypeMessage:   "score",
+	}
+
+	msg, _ := json.Marshal(allScoreMessage)
+	err = m.Broadcast(msg)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	kg.IsScoreSent = true
-	log.Println("end processing answers")
+	log.Println("end sending scores")
 }
 
 func (kg *KahootGame) InitScore (token string) error {
-	return kg.rm.KahootRepository.SetScore(token, 0)
+	return kg.rm.KahootRepository.SetScore(token, domain.NewScoreMessage(0, false))
 }

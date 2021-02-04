@@ -145,7 +145,7 @@ func (kc *KahootController) Login() gin.HandlerFunc {
 			return
 		}
 		if err := kc.KahootGames.InitScore(token); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error saving user: " + err.Error() })
+			c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error saving user score: " + err.Error() })
 			return
 		}
 		// TODO: terminar transaction

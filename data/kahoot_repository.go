@@ -29,15 +29,22 @@ func (kr *KahootRepository) GetByPin(pin string) (*domain.Kahoot, error) {
 	return &kahoot, nil
 }
 
-func (kr *KahootRepository) SetScore(token string, score int) error {
-	_, err := kr.Data.RedisDB.Do("SET", token, score)
+func (kr *KahootRepository) SetScore(token string, score *domain.ScoreMessage) error {
+	_, err := kr.Data.RedisDB.Do("HMSET", redis.Args{token}.AddFlat(score)...)
 	return err
 }
 
-func (kr *KahootRepository) GetScore (token string) (int, error){
-	score, err := redis.Int(kr.Data.RedisDB.Do("GET", token))
+func (kr *KahootRepository) GetScore (token string) (*domain.ScoreMessage, error){
+	values, err := redis.Values(kr.Data.RedisDB.Do("HGETALL", token))
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return score, nil
+
+	var score domain.ScoreMessage
+	err = redis.ScanStruct(values, &score)
+	if err != nil {
+		return nil, err
+	}
+
+	return &score, nil
 }
