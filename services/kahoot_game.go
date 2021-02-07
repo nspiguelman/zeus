@@ -293,3 +293,9 @@ func (kg *KahootGame) sendScores(m *melody.Melody) {
 func (kg *KahootGame) InitScore (token string) error {
 	return kg.rm.KahootRepository.SetScore(token, domain.NewScoreMessage(0, false))
 }
+
+func (kg *KahootGame) CreateKahoot(kahoot domain.KahootInput) (*domain.Kahoot, error) {
+	kahootDomain := domain.NewKahoot(kahoot)
+	err := kg.rm.KahootRepository.Create(kahootDomain)
+	return kahootDomain, err
+}
