@@ -50,8 +50,8 @@ func (kc *KahootController) CreateKahoot() func(c *gin.Context) {
 			return
 		}
 
-		kahoot := domain.NewKahoot(kahootInput)
-		if err := kc.rm.KahootRepository.Create(kahoot); err != nil {
+		kahoot, err := kc.KahootGames.CreateKahoot(kahootInput)
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{ "error": err.Error() })
 			return
 		}
