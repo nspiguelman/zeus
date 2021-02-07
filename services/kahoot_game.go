@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/olahol/melody.v1"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -294,8 +295,24 @@ func (kg *KahootGame) InitScore (token string) error {
 	return kg.rm.KahootRepository.SetScore(token, domain.NewScoreMessage(0, false))
 }
 
-func (kg *KahootGame) CreateKahoot(kahoot domain.KahootInput) (*domain.Kahoot, error) {
-	kahootDomain := domain.NewKahoot(kahoot)
+func (kg *KahootGame) CreateKahoot(kahootInput domain.KahootInput) (*domain.Kahoot, error) {
+	kahootDomain := domain.NewKahoot(kahootInput)
 	err := kg.rm.KahootRepository.Create(kahootDomain)
 	return kahootDomain, err
+}
+
+func (kg *KahootGame) CreateQuestion(questionInput domain.QuestionInput, pin string) (*domain.Question, int, string) {
+	kahoot, err := kg.rm.KahootRepository.GetByPin(pin)
+	if kahoot == nil && err == nil {
+		return nil, http.StatusNotFound, "Room " + pin + " not found"
+	}
+	if err != nil {
+		return nil, http.StatusInternalServerError, err.Error()
+	}
+
+	questionDomain := domain.NewQuestion(kahoot.ID, questionInput)
+	if err := kg.rm.QuestionRepository.Create(questionDomain); err != nil {
+		return nil, http.StatusInternalServerError, "Error saving question: " + err.Error()
+	}
+	return questionDomain, 200, ""
 }
