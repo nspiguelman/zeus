@@ -34,7 +34,7 @@ func (s *Server) StartServer() {
 	//WEB SOCKET ;
 	s.router.GET("/room/:pin/ws", s.kahootController.HandShake(s.socket))
 	s.kahootController.HandleMessage(s.socket)
-	s.router.GET("/room/:pin/send_question", s.kahootController.SendQuestion(s.socket))
+	s.router.POST("/room/:pin/send_question", s.kahootController.SendQuestion(s.socket))
 
 	s.router.Run()
 }

@@ -118,6 +118,8 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
  	}
 }
 
+// TODO: ordenar las llamadas. Las llamadas al rm no deben estar aca.
+// TODO: Si hay logica tiene que estar desarrollada mediante kahootGames,
 func (kc *KahootController) Login() gin.HandlerFunc {
 	return func (c *gin.Context) {
 
@@ -125,7 +127,7 @@ func (kc *KahootController) Login() gin.HandlerFunc {
 		var token = kc.KahootGames.GenerateToken(name)
 
 		pin := c.Param("pin")
-		kahoot, err := kc.rm.KahootRepository.GetByPin(pin);
+		kahoot, err := kc.rm.KahootRepository.GetByPin(pin)
 		if kahoot == nil && err == nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Room " + pin + " not found"})
 			return
@@ -135,12 +137,18 @@ func (kc *KahootController) Login() gin.HandlerFunc {
 			return
 		}
 
-		Kahoot_user := domain.NewUser(name,token,kahoot.ID)
+		KahootUser := domain.NewUser(name,token,kahoot.ID)
 
-		if err := kc.rm.UserRepository.Create(Kahoot_user); err != nil {
+		// TODO: arrancar transaction hasta crear en user Postgres y el key value en redis
+		if err := kc.rm.UserRepository.Create(KahootUser); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error saving user: " + err.Error() })
 			return
 		}
+		if err := kc.KahootGames.InitScore(token); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error saving user score: " + err.Error() })
+			return
+		}
+		// TODO: terminar transaction
 		c.JSON(200, gin.H{
 			"token": token,
 		})

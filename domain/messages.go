@@ -8,13 +8,24 @@ type AnswerMessage struct {
 }
 
 type ScoreMessage struct {
-	PartialScore int    `json:"partialScore"`
-	IsCorrect    bool   `json:"isCorrect"`
-	TypeMessage  string `json:"typeMessage"`
+	Score     int  `json:"score"`
+	IsCorrect bool `json:"isCorrect"`
+}
+
+type AllScoreMessage struct {
+	ScoreMessages map[string]ScoreMessage `json:"scores"`
+	TypeMessage   string                  `json:"typeMessage"`
 }
 
 type QuestionMessage struct {
 	QuestionId  int    `json:"questionId"`
 	AnswerIds   []int  `json:"answerIds"`
 	TypeMessage string `json:"typeMessage"`
+}
+
+func NewScoreMessage(score int, isCorrect bool) *ScoreMessage {
+	return &ScoreMessage{
+		Score:     score,
+		IsCorrect: isCorrect,
+	}
 }
