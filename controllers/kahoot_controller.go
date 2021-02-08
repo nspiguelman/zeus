@@ -61,35 +61,25 @@ func (kc *KahootController) CreateKahoot() func(c *gin.Context) {
 
 func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 	return func (c *gin.Context) {
-		pin := c.Param("pin")
-
-		kahoot, err := kc.rm.KahootRepository.GetByPin(pin);
-		if kahoot == nil && err == nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Room " + pin + " not found"})
-			return
-		}
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
 		var questionInput domain.QuestionInput
 		if err := c.ShouldBindJSON(&questionInput); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Error parsing input: " + err.Error()})
 			return
 		}
-
 		if err := validator.Validate(questionInput); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Error validating input: " + err.Error()})
 			return
 		}
 
-		question := domain.NewQuestion(kahoot.ID, questionInput)
-		if err := kc.rm.QuestionRepository.Create(question); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error saving question: " + err.Error() })
-			return
+		pin := c.Param("pin")
+		question, statusCode, err := kc.KahootGames.CreateQuestion(questionInput, pin)
+		if statusCode == http.StatusOK {
+			c.JSON(http.StatusCreated, gin.H{ "question": question })
+		} else {
+			c.JSON(statusCode, gin.H{"error": err})
 		}
 
+		/*
 		answerNo := 0
 		trueFound := false
 		answers := make([]domain.Answer, 0)
@@ -110,11 +100,7 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 			answerNo++
 			trueFound = answerInput.IsTrue
 		}
-
-		c.JSON(http.StatusCreated, gin.H{
-			"question": question,
-			"answers": answers,
-		})
+		*/
  	}
 }
 

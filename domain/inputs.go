@@ -12,9 +12,7 @@ type UserInput struct {
 type QuestionInput struct {
 	Question    string        `json:"question" validate:"min=1,max=255"`
 	Description string        `json:"description" validate:"min=1,max=255"`
-	Answers     []AnswerInput `json:"answers" validate:"min=2,max=4"`
 }
-
 
 type AnswerInput struct {
 	Description string `json:"description"`
