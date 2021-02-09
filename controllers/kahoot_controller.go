@@ -10,6 +10,7 @@ import (
 	"gopkg.in/validator.v2"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type KahootController struct {
@@ -78,30 +79,30 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 		} else {
 			c.JSON(statusCode, gin.H{"error": err})
 		}
-
-		/*
-		answerNo := 0
-		trueFound := false
-		answers := make([]domain.Answer, 0)
-
-		for _ ,answerInput := range questionInput.Answers {
-			if trueFound && answerInput.IsTrue {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Only one answer can be true"})
-				return
-			}
-
-			answer := domain.NewAnswer(question.ID, answerNo, answerInput)
-			if err := kc.rm.AnswerRepository.Create(answer); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error creating answer: " + err.Error() })
-				return
-			}
-			answers = append(answers, *answer)
-
-			answerNo++
-			trueFound = answerInput.IsTrue
-		}
-		*/
  	}
+}
+
+func (kc *KahootController) CreateAnswer () gin.HandlerFunc {
+	return func (c *gin.Context) {
+		var answerInput []domain.AnswerInput
+		if err := c.ShouldBindJSON(&answerInput); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Error parsing input: " + err.Error()})
+			return
+		}
+
+		questionId, err := strconv.Atoi(c.Param("questionId"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{ "error": err.Error() })
+			return
+		}
+
+		answers, statusCode, errMessage := kc.KahootGames.CreateAnswers(answerInput, questionId)
+		if statusCode == http.StatusOK {
+			c.JSON(statusCode, gin.H{ "Answers": answers })
+		} else {
+			c.JSON(statusCode, gin.H{ "error": errMessage })
+		}
+	}
 }
 
 // TODO: ordenar las llamadas. Las llamadas al rm no deben estar aca.

@@ -4,15 +4,14 @@ type Question struct {
 	ID          int    `gorm:"primaryKey" json:"id"`
 	Question    string `json:"question"`
 	Description string `json:"description"`
-	KahootID    int    `gorm:"not null" json:"kahoot_id"`
+	KahootID    int    `gorm:"not null" json:"kahootId"`
 }
 
 type Answer struct {
 	ID          int    `gorm:"primaryKey" json:"id"`
-	AnswerID    int    `gorm:"primaryKey" json:"answer_id"`
 	Description string `json:"description"`
-	QuestionID  int    `gorm:"not null" json:"question_id"`
-	IsTrue      bool   `json:"is_true"`
+	QuestionID  int    `gorm:"not null" json:"questionId"`
+	IsTrue      bool   `json:"isTrue"`
 }
 
 func NewQuestion(kahootID int, input QuestionInput) *Question{
@@ -23,9 +22,8 @@ func NewQuestion(kahootID int, input QuestionInput) *Question{
 	}
 }
 
-func NewAnswer(questionID int, answerID int, input AnswerInput) *Answer {
+func NewAnswer(questionID int, input AnswerInput) *Answer {
 	return &Answer{
-		AnswerID:    answerID,
 		Description: input.Description,
 		QuestionID:  questionID,
 		IsTrue:      input.IsTrue,

@@ -29,3 +29,15 @@ func (qr *QuestionRepository) GetAllByKahootID(kahootID int) ([]domain.Question,
 
 	return questions, nil
 }
+
+func (qr *QuestionRepository) GetById(questionId int) (*domain.Question, error) {
+	var question domain.Question
+	result := qr.Data.DB.Where("id = ?", questionId).First(&question)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &question, nil
+}

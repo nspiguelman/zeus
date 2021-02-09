@@ -5,12 +5,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/nspiguelman/zeus/data"
 	"github.com/nspiguelman/zeus/domain"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/olahol/melody.v1"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -315,4 +317,38 @@ func (kg *KahootGame) CreateQuestion(questionInput domain.QuestionInput, pin str
 		return nil, http.StatusInternalServerError, "Error saving question: " + err.Error()
 	}
 	return questionDomain, 200, ""
+}
+
+func (kg *KahootGame) CreateAnswers(answerInput []domain.AnswerInput, questionId int) ([]*domain.Answer, int, string) {
+	question, err := kg.rm.QuestionRepository.GetById(questionId)
+	fmt.Println(question)
+	fmt.Println(err)
+	if question == nil && err == nil {
+		return nil, http.StatusNotFound, "Question " + strconv.Itoa(questionId) + " not found"
+	}
+	if err != nil {
+		return nil, http.StatusInternalServerError, err.Error()
+	}
+
+	trueFound := false
+	var answersDomain []*domain.Answer
+	for _, answer := range answerInput {
+		answerDomain := domain.NewAnswer(questionId, answer)
+		if answerDomain.IsTrue && !trueFound {
+			trueFound = answerDomain.IsTrue
+		} else if answerDomain.IsTrue && trueFound {
+			return nil, http.StatusBadRequest, "Only one answer can be true"
+		}
+		answersDomain = append(answersDomain, answerDomain)
+	}
+
+	if !trueFound {
+		return nil, http.StatusBadRequest, "Almost one answer must be true"
+	}
+
+	if err := kg.rm.AnswerRepository.CreateAnswers(answersDomain); err != nil {
+		return nil, http.StatusInternalServerError, err.Error()
+	}
+
+	return answersDomain, http.StatusOK, "ok"
 }
