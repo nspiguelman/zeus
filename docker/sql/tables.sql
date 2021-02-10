@@ -15,12 +15,10 @@ CREATE TABLE question (
 );
 
 CREATE TABLE answer (
-    id SERIAL,
-    answer_id BIGINT NOT NULL,
+    id SERIAL NOT NULL PRIMARY KEY,
     description VARCHAR(255),
     question_id BIGINT NOT NULL,
     is_true BOOLEAN,
-    PRIMARY KEY(id, answer_id),
     CONSTRAINT fk_answer_question
         foreign key (question_id)
             REFERENCES question(id)

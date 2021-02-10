@@ -15,6 +15,6 @@ type QuestionInput struct {
 }
 
 type AnswerInput struct {
-	Description string `json:"description"`
-	IsTrue      bool   `json:"is_true"`
+	Description string `json:"description" binding:"required, exists""`
+	IsTrue      bool   `json:"isTrue"`
 }

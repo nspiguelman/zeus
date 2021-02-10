@@ -10,8 +10,8 @@ type AnswerRepository struct {
 	Data *Data
 }
 
-func (ar AnswerRepository) Create(answer *domain.Answer) error {
-	result := ar.Data.DB.Create(answer)
+func (ar AnswerRepository) CreateAnswers(answers []*domain.Answer) error {
+	result := ar.Data.DB.CreateInBatches(answers, len(answers))
 	return result.Error
 }
 

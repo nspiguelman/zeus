@@ -26,7 +26,7 @@ func (s *Server) StartServer() {
 	//ABM PREGUNTAS KAHOOT
 	s.router.POST("/room", s.kahootController.CreateKahoot())
 	s.router.POST("/room/:pin/question", s.kahootController.CreateQuestion())
-	// TODO: Alta de answers
+	s.router.POST("/question/:questionId/answer", s.kahootController.CreateAnswer())
 
 	//LOGIN ; Devuelve un token al usuario.
 	s.router.POST("/room/:pin/name/:name/login", s.kahootController.Login())

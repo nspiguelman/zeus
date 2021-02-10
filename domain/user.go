@@ -4,7 +4,7 @@ type Kahootuser struct {
 	ID       uint   `json:"id"`
 	Username string `json:"username"`
 	Token string 	`json:"token"`
-	KahootId int	`json:"kahoot_id"`
+	KahootId int	`json:"kahootId"`
 }
 
 func NewUser(username string, token string, kahootID int) *Kahootuser{
