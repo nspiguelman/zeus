@@ -316,13 +316,11 @@ func (kg *KahootGame) CreateQuestion(questionInput domain.QuestionInput, pin str
 	if err := kg.rm.QuestionRepository.Create(questionDomain); err != nil {
 		return nil, http.StatusInternalServerError, "Error saving question: " + err.Error()
 	}
-	return questionDomain, 200, ""
+	return questionDomain, http.StatusCreated, ""
 }
 
 func (kg *KahootGame) CreateAnswers(answerInput []domain.AnswerInput, questionId int) ([]*domain.Answer, int, string) {
 	question, err := kg.rm.QuestionRepository.GetById(questionId)
-	fmt.Println(question)
-	fmt.Println(err)
 	if question == nil && err == nil {
 		return nil, http.StatusNotFound, "Question " + strconv.Itoa(questionId) + " not found"
 	}
@@ -334,6 +332,7 @@ func (kg *KahootGame) CreateAnswers(answerInput []domain.AnswerInput, questionId
 	var answersDomain []*domain.Answer
 	for _, answer := range answerInput {
 		answerDomain := domain.NewAnswer(questionId, answer)
+		fmt.Println(answerDomain)
 		if answerDomain.IsTrue && !trueFound {
 			trueFound = answerDomain.IsTrue
 		} else if answerDomain.IsTrue && trueFound {
@@ -350,5 +349,5 @@ func (kg *KahootGame) CreateAnswers(answerInput []domain.AnswerInput, questionId
 		return nil, http.StatusInternalServerError, err.Error()
 	}
 
-	return answersDomain, http.StatusOK, "ok"
+	return answersDomain, http.StatusCreated, "ok"
 }

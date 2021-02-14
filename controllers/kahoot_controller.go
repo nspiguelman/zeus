@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/nspiguelman/zeus/data"
 	"github.com/nspiguelman/zeus/domain"
@@ -74,8 +75,8 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 
 		pin := c.Param("pin")
 		question, statusCode, err := kc.KahootGames.CreateQuestion(questionInput, pin)
-		if statusCode == http.StatusOK {
-			c.JSON(http.StatusCreated, gin.H{ "question": question })
+		if statusCode == http.StatusCreated {
+			c.JSON(statusCode, question)
 		} else {
 			c.JSON(statusCode, gin.H{"error": err})
 		}
@@ -84,6 +85,7 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 
 func (kc *KahootController) CreateAnswer () gin.HandlerFunc {
 	return func (c *gin.Context) {
+		fmt.Println("Entro a createAnswer")
 		var answerInput []domain.AnswerInput
 		if err := c.ShouldBindJSON(&answerInput); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Error parsing input: " + err.Error()})
@@ -91,14 +93,15 @@ func (kc *KahootController) CreateAnswer () gin.HandlerFunc {
 		}
 
 		questionId, err := strconv.Atoi(c.Param("questionId"))
+		fmt.Println(questionId)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{ "error": err.Error() })
 			return
 		}
 
 		answers, statusCode, errMessage := kc.KahootGames.CreateAnswers(answerInput, questionId)
-		if statusCode == http.StatusOK {
-			c.JSON(statusCode, gin.H{ "Answers": answers })
+		if statusCode == http.StatusCreated {
+			c.JSON(statusCode, answers)
 		} else {
 			c.JSON(statusCode, gin.H{ "error": errMessage })
 		}
