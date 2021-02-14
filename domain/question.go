@@ -2,7 +2,7 @@ package domain
 
 type Question struct {
 	ID          int    `gorm:"primaryKey" json:"id"`
-	Question    string `gorm:"not null" json:"Question"`
+	Question    string `gorm:"not null" json:"question"`
 	Description string `gorm:"not null" json:"description"`
 	KahootID    int    `gorm:"not null" json:"kahootId"`
 }
