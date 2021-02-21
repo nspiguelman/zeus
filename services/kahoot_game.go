@@ -218,8 +218,9 @@ func (kg *KahootGame) BroadCastQuestion(m *melody.Melody, question domain.Questi
 }
 
 func (kg *KahootGame) Answer(answer domain.AnswerMessage) {
-	if kg.IsTimeout {
-		log.Println("timeout:", answer)
+	if (kg.IsTimeout) {
+		log.Println("timeout: ", answer)
+		close(kg.answerChannel)
 	} else {
 		kg.answerChannel <- answer
 	}
@@ -235,19 +236,15 @@ func (kg *KahootGame) setRound(timeout int) {
 	go func(){
 		<-timer.C
 		kg.IsTimeout = true
-		close(kg.answerChannel)
 	}()
 }
 
 func (kg *KahootGame) processAnswers(m *melody.Melody) {
 	log.Println("begin processing answers")
 
-	start := time.Now()
 	for answer := range kg.answerChannel {
 		kg.processAnswer(answer)
 	}
-	elapsed := time.Since(start)
-	fmt.Println("Time elapsed: " + string(elapsed))
 
 	log.Println("end processing answers")
 
@@ -258,9 +255,9 @@ func (kg *KahootGame) processAnswer(answer domain.AnswerMessage) {
 	var score = kg.calculateScore(answer)
 	err := kg.saveDbScore(answer.Token, score)
 	if err != nil {
-		log.Panic(err.Error())
+		//log.Panic(err.Error())
+		log.Println("Error saving score: " + err.Error())
 	}
-	time.Sleep(10 * time.Second)
 }
 
 func (kg *KahootGame) sendScores(m *melody.Melody) {
