@@ -152,16 +152,11 @@ func (kc *KahootController) HandShake(socket *melody.Melody) gin.HandlerFunc {
 }
 
 func (kc *KahootController) HandleMessage(socket *melody.Melody) {
-	// TODO: 1. Hacer un channel donde reciba todas las respuesta del cliente
-	// TODO: 2. Hacer una goroutine que este todo el tiempo escuchando al chanel para procesar la respuesta y guardar en bdd (siempre y cuando el canal este abierto , lo cual es determinado por el timeOut de la maquina de estado
-	// TODO: 3. Cerrar el channel cuando haya timeout.
-	// TODO: 4. Analizar si mover el timeout de la maquina de estados y dejarlo como una función timer
 	socket.HandleMessage(func(x *melody.Session, msg []byte) {
 		// pin := x.Request.Header.Get("pin")
 		token := x.Request.Header.Get("token")
 
 		answer := domain.AnswerMessage{}
-		answer.Token = token
 
 		err := json.Unmarshal([]byte(msg), &answer)
 		if err != nil {
