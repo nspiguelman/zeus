@@ -183,7 +183,6 @@ func (kg *KahootGame) saveDbScore(token string, scoreInput *domain.ScoreMessage)
 	return nil
 }
 
-// TODO: agregar el puntaje parametrizado
 func (kg *KahootGame) calculateScore(answer domain.AnswerMessage) *domain.ScoreMessage {
 	var score int
 	isCorrect := kg.isAnswerCorrect(answer)
