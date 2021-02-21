@@ -15,8 +15,8 @@ import (
 )
 
 type KahootController struct {
-	rm *data.RepositoryManager
-	KahootGames *services.KahootGame
+	rm         *data.RepositoryManager
+	KahootGame *services.KahootGame
 }
 
 func NewKahootController() KahootController {
@@ -28,8 +28,8 @@ func NewKahootController() KahootController {
 	repositoryManager := data.NewRepositoryManager(dbData)
 
 	return KahootController{
-		rm:          repositoryManager,
-		KahootGames: services.NewKahootGame(repositoryManager),
+		rm:         repositoryManager,
+		KahootGame: services.NewKahootGame(repositoryManager),
 	}
 }
 
@@ -52,7 +52,7 @@ func (kc *KahootController) CreateKahoot() func(c *gin.Context) {
 			return
 		}
 
-		kahoot, err := kc.KahootGames.CreateKahoot(kahootInput)
+		kahoot, err := kc.KahootGame.CreateKahoot(kahootInput)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{ "error": err.Error() })
 			return
@@ -74,7 +74,7 @@ func (kc *KahootController) CreateQuestion() gin.HandlerFunc {
 		}
 
 		pin := c.Param("pin")
-		question, statusCode, err := kc.KahootGames.CreateQuestion(questionInput, pin)
+		question, statusCode, err := kc.KahootGame.CreateQuestion(questionInput, pin)
 		if statusCode == http.StatusCreated {
 			c.JSON(statusCode, question)
 		} else {
@@ -99,7 +99,7 @@ func (kc *KahootController) CreateAnswer () gin.HandlerFunc {
 			return
 		}
 
-		answers, statusCode, errMessage := kc.KahootGames.CreateAnswers(answerInput, questionId)
+		answers, statusCode, errMessage := kc.KahootGame.CreateAnswers(answerInput, questionId)
 		if statusCode == http.StatusCreated {
 			c.JSON(statusCode, answers)
 		} else {
@@ -114,7 +114,7 @@ func (kc *KahootController) Login() gin.HandlerFunc {
 	return func (c *gin.Context) {
 
 		name := c.Param("name")
-		var token = kc.KahootGames.GenerateToken(name)
+		var token = kc.KahootGame.GenerateToken(name)
 
 		pin := c.Param("pin")
 		kahoot, err := kc.rm.KahootRepository.GetByPin(pin)
@@ -134,7 +134,7 @@ func (kc *KahootController) Login() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error saving user: " + err.Error() })
 			return
 		}
-		if err := kc.KahootGames.InitScore(token); err != nil {
+		if err := kc.KahootGame.InitScore(token); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{ "error": "Error saving user score: " + err.Error() })
 			return
 		}
@@ -164,7 +164,7 @@ func (kc *KahootController) HandleMessage(socket *melody.Melody) {
 		}
 		answer.Token = token
 
-		kc.KahootGames.Answer(answer)
+		kc.KahootGame.Answer(answer)
 	})
 }
 
@@ -172,26 +172,26 @@ func (kc *KahootController) HandleMessage(socket *melody.Melody) {
 func (kc *KahootController) SendQuestion(socket *melody.Melody) gin.HandlerFunc {
 	return func(c *gin.Context){
 		pin := c.Param("pin")
-		if !kc.KahootGames.IsStarted {
-			if err := kc.KahootGames.Start(pin); err != nil {
+		if !kc.KahootGame.IsStarted {
+			if err := kc.KahootGame.Start(pin); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 		} else {
-			if !kc.KahootGames.IsScoreSent {
+			if !kc.KahootGame.IsScoreSent {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot send next question. Score must be sent."})
 				return
 			}
 
-			if err := kc.KahootGames.NextQuestion(pin); err != nil {
+			if err := kc.KahootGame.NextQuestion(pin); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 		}
 
-		kc.KahootGames.BroadCastQuestion(socket, domain.QuestionMessage{
-			QuestionId: kc.KahootGames.CurrentQuestion,
-			AnswerIds: kc.KahootGames.GetCurrentAnswerIds(),
+		kc.KahootGame.BroadCastQuestion(socket, domain.QuestionMessage{
+			QuestionId: kc.KahootGame.CurrentQuestion,
+			AnswerIds: kc.KahootGame.GetCurrentAnswerIds(),
 			TypeMessage: "question",
 		})
 	}
