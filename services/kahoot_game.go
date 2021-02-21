@@ -255,7 +255,6 @@ func (kg *KahootGame) processAnswer(answer domain.AnswerMessage) {
 	var score = kg.calculateScore(answer)
 	err := kg.saveDbScore(answer.Token, score)
 	if err != nil {
-		//log.Panic(err.Error())
 		log.Println("Error saving score: " + err.Error())
 	}
 }
