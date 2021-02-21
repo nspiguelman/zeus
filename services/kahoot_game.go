@@ -227,8 +227,6 @@ func (kg *KahootGame) Answer(answer domain.AnswerMessage) {
 }
 
 func (kg *KahootGame) setRound(timeout int) {
-	// setea parametros de la maquina de estados
-	// crea el canal de respuestas y timea el cierre
 	kg.IsTimeout = false
 	kg.IsScoreSent = false
 	kg.ArrivalOrder = 100
