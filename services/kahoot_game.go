@@ -89,7 +89,6 @@ func (kg *KahootGame) Start(pin string) error {
 
 func (kg *KahootGame) NextQuestion(pin string) error {
 	if kg.CurrentQuestionIndex + 1 >= kg.TotalQuestions {
-		//TODO: enviar algún evento para game over, por ahora devolvemos error
 		return errors.New("Game Over")
 	}
 
