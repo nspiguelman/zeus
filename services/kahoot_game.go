@@ -242,17 +242,25 @@ func (kg *KahootGame) setRound(timeout int) {
 func (kg *KahootGame) processAnswers(m *melody.Melody) {
 	log.Println("begin processing answers")
 
+	start := time.Now()
 	for answer := range kg.answerChannel {
-		var score = kg.calculateScore(answer)
-		err := kg.saveDbScore(answer.Token, score)
-		if err != nil {
-			log.Panic(err.Error())
-		}
+		kg.processAnswer(answer)
 	}
+	elapsed := time.Since(start)
+	fmt.Println("Time elapsed: " + string(elapsed))
 
 	log.Println("end processing answers")
 
 	go kg.sendScores(m)
+}
+
+func (kg *KahootGame) processAnswer(answer domain.AnswerMessage) {
+	var score = kg.calculateScore(answer)
+	err := kg.saveDbScore(answer.Token, score)
+	if err != nil {
+		log.Panic(err.Error())
+	}
+	time.Sleep(10 * time.Second)
 }
 
 func (kg *KahootGame) sendScores(m *melody.Melody) {
@@ -338,7 +346,7 @@ func (kg *KahootGame) CreateAnswers(answerInput []domain.AnswerInput, questionId
 	}
 
 	if !trueFound {
-		return nil, http.StatusBadRequest, "Almost one answer must be true"
+		return nil, http.StatusBadRequest, "At least one answer must be true"
 	}
 
 	if err := kg.rm.AnswerRepository.CreateAnswers(answersDomain); err != nil {
