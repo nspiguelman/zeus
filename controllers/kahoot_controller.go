@@ -169,7 +169,6 @@ func (kc *KahootController) HandleMessage(socket *melody.Melody) {
 }
 
 
-// TODO: Analizar si la goroutine muere antes. Porque tenemos la duda si la función termina e interrumpe la goroutine
 func (kc *KahootController) SendQuestion(socket *melody.Melody) gin.HandlerFunc {
 	return func(c *gin.Context){
 		pin := c.Param("pin")
