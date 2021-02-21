@@ -14,7 +14,7 @@ var (
 
 type Data struct {
 	DB *gorm.DB
-	RedisDB redis.Conn
+	RedisPool *redis.Pool
 }
 
 func initDB() {
@@ -23,14 +23,11 @@ func initDB() {
 		log.Panic(err.Error())
 	}
 
-	conn, err := getRedisConnection()
-	if err != nil {
-		log.Panic(err.Error())
-	}
+	pool := newPool()
 
 	data = &Data {
 		DB: db,
-		RedisDB: conn,
+		RedisPool: pool,
 	}
 }
 
@@ -45,5 +42,5 @@ func Close() (error, error) {
 	}
 
 	sqlDB, _ := data.DB.DB()
-	return sqlDB.Close(), data.RedisDB.Close()
+	return sqlDB.Close(), data.RedisPool.Close()
 }

@@ -89,7 +89,6 @@ func (kg *KahootGame) Start(pin string) error {
 
 func (kg *KahootGame) NextQuestion(pin string) error {
 	if kg.CurrentQuestionIndex + 1 >= kg.TotalQuestions {
-		//TODO: enviar algún evento para game over, por ahora devolvemos error
 		return errors.New("Game Over")
 	}
 
@@ -184,7 +183,6 @@ func (kg *KahootGame) saveDbScore(token string, scoreInput *domain.ScoreMessage)
 	return nil
 }
 
-// TODO: agregar el puntaje parametrizado
 func (kg *KahootGame) calculateScore(answer domain.AnswerMessage) *domain.ScoreMessage {
 	var score int
 	isCorrect := kg.isAnswerCorrect(answer)
@@ -220,16 +218,15 @@ func (kg *KahootGame) BroadCastQuestion(m *melody.Melody, question domain.Questi
 }
 
 func (kg *KahootGame) Answer(answer domain.AnswerMessage) {
-	if kg.IsTimeout {
-		log.Println("timeout:", answer)
+	if (kg.IsTimeout) {
+		log.Println("timeout: ", answer)
+		close(kg.answerChannel)
 	} else {
 		kg.answerChannel <- answer
 	}
 }
 
 func (kg *KahootGame) setRound(timeout int) {
-	// setea parametros de la maquina de estados
-	// crea el canal de respuestas y timea el cierre
 	kg.IsTimeout = false
 	kg.IsScoreSent = false
 	kg.ArrivalOrder = 100
@@ -239,7 +236,6 @@ func (kg *KahootGame) setRound(timeout int) {
 	go func(){
 		<-timer.C
 		kg.IsTimeout = true
-		close(kg.answerChannel)
 	}()
 }
 
@@ -247,16 +243,20 @@ func (kg *KahootGame) processAnswers(m *melody.Melody) {
 	log.Println("begin processing answers")
 
 	for answer := range kg.answerChannel {
-		var score = kg.calculateScore(answer)
-		err := kg.saveDbScore(answer.Token, score)
-		if err != nil {
-			log.Panic(err.Error())
-		}
+		kg.processAnswer(answer)
 	}
 
 	log.Println("end processing answers")
 
 	go kg.sendScores(m)
+}
+
+func (kg *KahootGame) processAnswer(answer domain.AnswerMessage) {
+	var score = kg.calculateScore(answer)
+	err := kg.saveDbScore(answer.Token, score)
+	if err != nil {
+		log.Println("Error saving score: " + err.Error())
+	}
 }
 
 func (kg *KahootGame) sendScores(m *melody.Melody) {
@@ -342,7 +342,7 @@ func (kg *KahootGame) CreateAnswers(answerInput []domain.AnswerInput, questionId
 	}
 
 	if !trueFound {
-		return nil, http.StatusBadRequest, "Almost one answer must be true"
+		return nil, http.StatusBadRequest, "At least one answer must be true"
 	}
 
 	if err := kg.rm.AnswerRepository.CreateAnswers(answersDomain); err != nil {
